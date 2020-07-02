@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml" filepath="$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml" />
+      <module fileurl="file://$PROJECT_DIR$/InnoMetricsAPI/InnoMetricsAPI.iml" filepath="$PROJECT_DIR$/InnoMetricsAPI/InnoMetricsAPI.iml" />
+      <module fileurl="file://$PROJECT_DIR$/InnoMetricsApp/InnoMetricsApp.iml" filepath="$PROJECT_DIR$/InnoMetricsApp/InnoMetricsApp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/InnoMetricsDataCollector/InnoMetricsDataCollector.iml" filepath="$PROJECT_DIR$/InnoMetricsDataCollector/InnoMetricsDataCollector.iml" />
+    </modules>
+  </component>
+</project>
