@@ -38,6 +38,12 @@ public class Login extends Application {
     String checkUser, checkPw = "";
 
     @Override
+    public void stop(){
+        System.out.println("Stage is closing");
+        // Save file
+    }
+
+    @Override
     public void start(Stage primaryStage) throws Exception {
 
         window = primaryStage;
@@ -108,33 +114,28 @@ public class Login extends Application {
         hbimg.setAlignment(Pos.BOTTOM_CENTER);
         hbimg.getChildren().add(new ImageView(image));
         aboutGrid.add(hbimg, 0, 0);
-//        aboutGrid.add(hbimg, 0, 1,2,1);
 
-        //Text aboutTemporalTitle = new Text("Data collector version \nnumber");
-        VBox aboutVbox = new VBox(5);
+
+        VBox aboutVbox = new VBox(10);
         aboutVbox.setAlignment(Pos.CENTER);
-        final Label aboutTemporalTitle = new Label("Data collector version number");
-        aboutTemporalTitle.setMaxWidth(Double.MAX_VALUE);
-        aboutTemporalTitle.setAlignment(Pos.CENTER);
-        aboutTemporalTitle.setTextAlignment(CENTER);
-        aboutTemporalTitle.setFont(Font.font("Verdana", FontWeight.NORMAL, 15));
-        aboutVbox.getChildren().add(aboutTemporalTitle);
-        //aboutGrid.add(aboutVbox,0,GridPane.REMAINING);
-        //aboutGrid.add(aboutTemporalTitle, 0, 3);
-        //aboutGrid.add(aboutTemporalTitle, 0, 3,2,1);
+        final Label collectorVersion = new Label("Version : 1.0.1");
+        collectorVersion.setMaxWidth(Double.MAX_VALUE);
+        collectorVersion.setAlignment(Pos.CENTER);
+        collectorVersion.setTextAlignment(CENTER);
+        collectorVersion.setFont(Font.font(collectorVersion.getFont().toString(), FontWeight.NORMAL, 15));
+        aboutVbox.getChildren().add(collectorVersion);
 
         //User account
         final Label usern = new Label("Logged in as");
+        usern.setFont(Font.font( usern.getFont().toString(),FontWeight.BOLD,15 ));
         usern.setTextAlignment(CENTER);
         final Label versionNumber = new Label("g.dlamini@innopolis.university");
-        versionNumber.setMaxWidth(180);
+        versionNumber.setMaxWidth(300);
         versionNumber.setTextAlignment(CENTER);
         versionNumber.setWrapText(true);
         aboutVbox.getChildren().add(usern);
         aboutVbox.getChildren().add(versionNumber);
         aboutGrid.add(aboutVbox,0,1);
-        //aboutGrid.add(versionNumber, 0, 4);
-        //aboutGrid.add(versionNumber, 0, 4,4,1);
 
         // add logout and update check
         HBox hboxLogInUpdate = new HBox(15);
@@ -153,12 +154,12 @@ public class Login extends Application {
         mainGrid.setAlignment(Pos.TOP_CENTER);
         mainGrid.setHgap(10);
         mainGrid.setVgap(10);
-        mainGrid.setPadding(new Insets(30, 5, 5, 5));
+        mainGrid.setPadding(new Insets(30, 15, 5, 15));
         //mainGrid.setGridLinesVisible(true);
 
 
         Text currentSess = new Text("Current session");
-        currentSess.setFont(Font.font("Verdana", FontWeight.SEMI_BOLD, 15));
+        currentSess.setFont(Font.font(currentSess.getFont().toString(), FontWeight.BOLD, 15));
         HBox mainTitleBox = new HBox();
         mainTitleBox.setAlignment(Pos.CENTER);
         //mainTitleBox.setPadding(new Insets(5,0,5,0));
@@ -219,6 +220,7 @@ public class Login extends Application {
 
 
         VBox vBox2 = new VBox(10);
+        vBox2.setMinWidth(130);
         vBox2.setAlignment(Pos.CENTER_LEFT);
         vBox2.getChildren().addAll(HostOS,UserName,HostIpAdrs,HostMacAdrs);
         mainGrid.add(vBox2,0,1);
@@ -229,7 +231,7 @@ public class Login extends Application {
 
         //Focus Application
         Text activeapp = new Text("Current Focused Window");
-        activeapp.setFont(Font.font("Verdana", FontWeight.SEMI_BOLD, 15));
+        activeapp.setFont(Font.font(activeapp.getFont().toString(), FontWeight.BOLD, 15));
         HBox activeappTitleBox = new HBox();
         activeappTitleBox.setAlignment(Pos.CENTER);
         activeappTitleBox.getChildren().add(activeapp);
@@ -244,14 +246,16 @@ public class Login extends Application {
 
         //focused window process name
         TextFlow flow = new TextFlow();
-        flow.setTextAlignment(CENTER);
-        Text text1 = new Text("InelliJIDEA Communiity edition Communiity edition ");
-        Text text2 = new Text("00:00:05");
-        VBox jj = new VBox(10);
-        jj.setAlignment(Pos.CENTER);
-        flow.getChildren().addAll(text1,text2);
-        jj.getChildren().add(flow);
-        mainGrid.add(jj,1,4);
+        //flow.setTextAlignment(CENTER);
+        Text windowName = new Text("InelliJIDEA Communiity edition 2020"); //TODO: return from data collector module
+        Text focusTime = new Text("00:00:05"); //TODO: Create a timer for each focused window
+        flow.getChildren().add(windowName);
+
+        VBox focusedVBox = new VBox(10);
+        focusedVBox.setAlignment(Pos.CENTER_LEFT);
+        focusedVBox.getChildren().add(flow);
+        focusedVBox.getChildren().add(focusTime);
+        mainGrid.add(focusedVBox,1,4); //add to main grid
 
         //Settings tab contents
         GridPane settingsGrid = new GridPane();
@@ -262,7 +266,7 @@ public class Login extends Application {
 
         // Settings tab title
         final Text settingsGridTitle = new Text("Data collector settings");
-        settingsGridTitle.setFont(Font.font("Verdana", FontWeight.NORMAL, 15));
+        settingsGridTitle.setFont(Font.font(settingsGridTitle.getFont().toString(), FontWeight.NORMAL, 15));
         HBox titleHbox = new HBox(10);
         titleHbox.setAlignment(Pos.CENTER);
         titleHbox.getChildren().add(settingsGridTitle);
@@ -336,6 +340,7 @@ public class Login extends Application {
                     lblMessage.setTextFill(Color.GREEN);
                     window.setTitle("InnoMetrics data collector");
                     window.setScene(mainScene);
+                    windowName.setText(windowName.getText().toUpperCase());
 
                 }
                 else{
