@@ -3,33 +3,39 @@ package sample;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.fxml.FXMLLoader;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 
-import java.util.List;
+
+import java.io.IOException;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.UnknownHostException;
+import java.util.Enumeration;
+import java.util.Locale;
+
+import static javafx.scene.text.TextAlignment.CENTER;
 
 public class Login extends Application {
 
     private Stage window;
     String user = "Java";
     String real_pass = "pass";
-    String checkUser, checkPw;
+    String checkUser, checkPw = "";
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -41,7 +47,7 @@ public class Login extends Application {
         //window.setScene(new Scene(root, 350, 275));
         window.setTitle("InnoMetrics Login");
         window.setWidth(360);
-        window.setHeight(300);
+        window.setHeight(350);
         window.show();
 
         //Login Grid create
@@ -49,7 +55,7 @@ public class Login extends Application {
         loginGrid.setAlignment(Pos.CENTER);
         loginGrid.setHgap(10);
         loginGrid.setVgap(10);
-        loginGrid.setPadding(new Insets(25, 25, 25, 25));
+        loginGrid.setPadding(new Insets(5, 10, 5, 10));
 
         //Set login scene title
         //Text scenetitle = new Text("Login to Data Collector");
@@ -91,23 +97,44 @@ public class Login extends Application {
         //About Tab
         GridPane aboutGrid = new GridPane();
         aboutGrid.setAlignment(Pos.CENTER);
+        //aboutGrid.setGridLinesVisible(true);
         aboutGrid.setHgap(10);
         aboutGrid.setVgap(10);
-        aboutGrid.setPadding(new Insets(25, 25, 25, 25));
-
-        //Text aboutTemporalTitle = new Text("Data collector version \nnumber");
-        final Label aboutTemporalTitle = new Label("Data collector version number");
-        aboutTemporalTitle.setMaxWidth(Double.MAX_VALUE);
-        aboutTemporalTitle.setAlignment(Pos.CENTER);
-        aboutTemporalTitle.setFont(Font.font("Verdana", FontWeight.NORMAL, 15));
-        aboutGrid.add(aboutTemporalTitle, 0, 3);
+        aboutGrid.setPadding(new Insets(10, 5, 10, 5));
 
         //Add InnoMetrics Icon
         javafx.scene.image.Image image = new javafx.scene.image.Image(getClass().getResource("metrics-collector.png").toExternalForm());
         HBox hbimg = new HBox(10);
         hbimg.setAlignment(Pos.BOTTOM_CENTER);
         hbimg.getChildren().add(new ImageView(image));
-        aboutGrid.add(hbimg, 0, 1,2,1);
+        aboutGrid.add(hbimg, 0, 0);
+//        aboutGrid.add(hbimg, 0, 1,2,1);
+
+        //Text aboutTemporalTitle = new Text("Data collector version \nnumber");
+        VBox aboutVbox = new VBox(5);
+        aboutVbox.setAlignment(Pos.CENTER);
+        final Label aboutTemporalTitle = new Label("Data collector version number");
+        aboutTemporalTitle.setMaxWidth(Double.MAX_VALUE);
+        aboutTemporalTitle.setAlignment(Pos.CENTER);
+        aboutTemporalTitle.setTextAlignment(CENTER);
+        aboutTemporalTitle.setFont(Font.font("Verdana", FontWeight.NORMAL, 15));
+        aboutVbox.getChildren().add(aboutTemporalTitle);
+        //aboutGrid.add(aboutVbox,0,GridPane.REMAINING);
+        //aboutGrid.add(aboutTemporalTitle, 0, 3);
+        //aboutGrid.add(aboutTemporalTitle, 0, 3,2,1);
+
+        //User account
+        final Label usern = new Label("Logged in as");
+        usern.setTextAlignment(CENTER);
+        final Label versionNumber = new Label("g.dlamini@innopolis.university");
+        versionNumber.setMaxWidth(180);
+        versionNumber.setTextAlignment(CENTER);
+        versionNumber.setWrapText(true);
+        aboutVbox.getChildren().add(usern);
+        aboutVbox.getChildren().add(versionNumber);
+        aboutGrid.add(aboutVbox,0,1);
+        //aboutGrid.add(versionNumber, 0, 4);
+        //aboutGrid.add(versionNumber, 0, 4,4,1);
 
         // add logout and update check
         HBox hboxLogInUpdate = new HBox(15);
@@ -118,18 +145,113 @@ public class Login extends Application {
         loginBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
         hboxLogInUpdate.setPadding(new Insets(20,0,5,0));
         hboxLogInUpdate.getChildren().addAll(updateBtn, loginBtn);
-        aboutGrid.add(hboxLogInUpdate,0,4,3,3);
+        aboutGrid.add(hboxLogInUpdate,0,2);
+//        aboutGrid.add(hboxLogInUpdate,0,5,2,3);
 
         //Main Tab contents
         GridPane mainGrid = new GridPane();
-        mainGrid.setAlignment(Pos.CENTER);
+        mainGrid.setAlignment(Pos.TOP_CENTER);
         mainGrid.setHgap(10);
         mainGrid.setVgap(10);
-        mainGrid.setPadding(new Insets(25, 25, 25, 25));
+        mainGrid.setPadding(new Insets(30, 5, 5, 5));
+        //mainGrid.setGridLinesVisible(true);
 
-        Text mainGridTemporalTitle = new Text("Main data collector \nprocesses status Show \n(activities, actions, etc..)");
-        mainGridTemporalTitle.setFont(Font.font("Verdana", FontWeight.NORMAL, 20));
-        mainGrid.add(mainGridTemporalTitle, 0, 0, 2, 1);
+
+        Text currentSess = new Text("Current session");
+        currentSess.setFont(Font.font("Verdana", FontWeight.SEMI_BOLD, 15));
+        HBox mainTitleBox = new HBox();
+        mainTitleBox.setAlignment(Pos.CENTER);
+        //mainTitleBox.setPadding(new Insets(5,0,5,0));
+        mainTitleBox.getChildren().add(currentSess);
+        mainGrid.add(mainTitleBox, 0, 0, 2, 1);
+
+        //Get IP-address
+        String HostIp = "";
+        try(final DatagramSocket socket = new DatagramSocket()){
+            socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+            HostIp = socket.getLocalAddress().getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
+        //Get MAC-address
+        String macAdrs = "";
+        Enumeration<NetworkInterface> networks = NetworkInterface.getNetworkInterfaces();
+        NetworkInterface inter;
+        while (networks.hasMoreElements()) {
+            inter = networks.nextElement();
+            byte[] mac = inter.getHardwareAddress();
+            if (mac != null) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < mac.length; i++) {
+                    sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));
+                }
+                macAdrs = sb.toString();
+            }
+        }
+
+        final Label UserName = new Label("User Name:");
+        final Label HostIpAdrs = new Label("IP-address:");
+        final Label HostMacAdrs = new Label("Mac-address:");
+        final Label HostOS = new Label("Operating System:");
+
+        String osName, osVersion = "";
+        try {
+            osName = System.getProperty("os.name");
+            if (osName == null) {
+                throw new IOException("os.name not found");
+            }
+            osName = osName.toLowerCase(Locale.ENGLISH);
+        }
+        finally {
+            osVersion = System.getProperty("os.version");
+        }
+
+        Label HostOsVal = new Label(osName+" "+osVersion);
+        Label HostIpAdrsVal = new Label(HostIp);
+        Label UserNameVal = new Label("g.dlamini");
+        Label HostMacAdrsVal = new Label(macAdrs);
+
+        VBox vBox1 = new VBox(10);
+        vBox1.setAlignment(Pos.CENTER_LEFT);
+        vBox1.getChildren().addAll(HostOsVal,UserNameVal,HostIpAdrsVal,HostMacAdrsVal);
+        mainGrid.add(vBox1,1,1);
+
+
+        VBox vBox2 = new VBox(10);
+        vBox2.setAlignment(Pos.CENTER_LEFT);
+        vBox2.getChildren().addAll(HostOS,UserName,HostIpAdrs,HostMacAdrs);
+        mainGrid.add(vBox2,0,1);
+
+        Separator separator = new Separator(Orientation.HORIZONTAL);
+        separator.setPadding(new Insets(10,0,5,0));
+        mainGrid.add(separator,0,2,2,1);
+
+        //Focus Application
+        Text activeapp = new Text("Current Focused Window");
+        activeapp.setFont(Font.font("Verdana", FontWeight.SEMI_BOLD, 15));
+        HBox activeappTitleBox = new HBox();
+        activeappTitleBox.setAlignment(Pos.CENTER);
+        activeappTitleBox.getChildren().add(activeapp);
+        mainGrid.add(activeappTitleBox, 0, 3, 2, 1);
+
+        //focused window icon
+        javafx.scene.image.Image activeAppIcon = new javafx.scene.image.Image(getClass().getResource("metrics-collector.png").toExternalForm());
+        HBox activeAppBox = new HBox(10);
+        activeAppBox.setAlignment(Pos.BOTTOM_CENTER);
+        activeAppBox.getChildren().add(new ImageView(activeAppIcon));
+        mainGrid.add(activeAppBox, 0, 4,1,1);
+
+        //focused window process name
+        TextFlow flow = new TextFlow();
+        flow.setTextAlignment(CENTER);
+        Text text1 = new Text("InelliJIDEA Communiity edition Communiity edition ");
+        Text text2 = new Text("00:00:05");
+        VBox jj = new VBox(10);
+        jj.setAlignment(Pos.CENTER);
+        flow.getChildren().addAll(text1,text2);
+        jj.getChildren().add(flow);
+        mainGrid.add(jj,1,4);
 
         //Settings tab contents
         GridPane settingsGrid = new GridPane();
@@ -138,17 +260,40 @@ public class Login extends Application {
         settingsGrid.setVgap(10);
         settingsGrid.setPadding(new Insets(25, 25, 25, 25));
 
-        Text settingsGridTemporalTitle = new Text("Data collector settings");
-        settingsGridTemporalTitle.setFont(Font.font("Verdana", FontWeight.NORMAL, 20));
-        settingsGrid.add(settingsGridTemporalTitle, 0, 0, 2, 1);
+        // Settings tab title
+        final Text settingsGridTitle = new Text("Data collector settings");
+        settingsGridTitle.setFont(Font.font("Verdana", FontWeight.NORMAL, 15));
+        HBox titleHbox = new HBox(10);
+        titleHbox.setAlignment(Pos.CENTER);
+        titleHbox.getChildren().add(settingsGridTitle);
+        settingsGrid.add(titleHbox, 0, 0,2,1);
+
+        final int initialValue = 5;
+        final Label dataCollectIntvlLabel  = new Label("Data Collection interval (min)");
+        final Spinner<Integer> dataCollectIntvl = new Spinner<Integer>();
+        SpinnerValueFactory<Integer> VdataCollectValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, initialValue);
+        dataCollectIntvl.setValueFactory(VdataCollectValueFactory);
+        dataCollectIntvl.setMaxWidth(70.0);
+
+        final Label dataSendIntvLabel = new Label("Data send interval (min)");
+        final Spinner<Integer> dataSendIntv = new Spinner<Integer>();
+        SpinnerValueFactory<Integer> dataSendValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, initialValue);
+        dataSendIntv.setValueFactory(dataSendValueFactory);
+        dataSendIntv.setMaxWidth(70.0);
+
+        settingsGrid.add(dataCollectIntvlLabel,0,2);
+        settingsGrid.add(dataCollectIntvl,1,2);
+        settingsGrid.add(dataSendIntvLabel,0,3);
+        settingsGrid.add(dataSendIntv,1,3);
 
         //save settings Button
         Button btnSaveSettings = new Button("Save Settings");
-        btnSaveSettings.setFont(Font.font("Verdana",FontWeight.BOLD,20));
+        btnSaveSettings.setFont(Font.font("Verdana",FontWeight.BOLD,15));
         HBox hbBtn1 = new HBox(10);
+        hbBtn1.setPadding(new Insets(10, 0, 10, 0));
         hbBtn1.setAlignment(Pos.BOTTOM_CENTER);
         hbBtn1.getChildren().add(btnSaveSettings);
-        settingsGrid.add(hbBtn1, 0, 3,2,1);
+        settingsGrid.add(hbBtn1, 0, 4,2,1);
 
         //create tabs group for Main GUI
         Group root = new Group();
@@ -201,6 +346,7 @@ public class Login extends Application {
                     passwordField.setText("");
 
                 }
+
             }
         });
 
