@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="innometrics-linux-datacollector-java11:main" external.linked.project.path="$MODULE_DIR$/../.." external.root.project.path="$MODULE_DIR$/../.." external.system.id="GRADLE" external.system.module.group="inno.metrics" external.system.module.type="sourceSet" external.system.module.version="1.0-SNAPSHOT" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
+    <output url="file://$MODULE_DIR$/../../build/classes/java/main" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../build/generated/sources/annotationProcessor/java/main">
+      <sourceFolder url="file://$MODULE_DIR$/../../build/generated/sources/annotationProcessor/java/main" isTestSource="false" generated="true" />
+    </content>
+    <content url="file://$MODULE_DIR$/../../src">
+      <sourceFolder url="file://$MODULE_DIR$/../../src" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Gradle: org.glassfish.jersey.core:jersey-client:2.0-m09" level="project" />
+    <orderEntry type="library" name="Gradle: org.json:json:20090211" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Gradle: org.projectlombok:lombok:1.18.12" level="project" />
+    <orderEntry type="library" name="Gradle: org.openjfx:javafx-fxml:linux:13" level="project" />
+    <orderEntry type="library" name="Gradle: org.openjfx:javafx-controls:13" level="project" />
+    <orderEntry type="library" name="Gradle: org.openjfx:javafx-controls:linux:13" level="project" />
+    <orderEntry type="library" name="Gradle: org.openjfx:javafx-graphics:13" level="project" />
+    <orderEntry type="library" name="Gradle: org.openjfx:javafx-graphics:linux:13" level="project" />
+    <orderEntry type="library" name="Gradle: org.openjfx:javafx-base:13" level="project" />
+    <orderEntry type="library" name="Gradle: org.openjfx:javafx-base:linux:13" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.jersey.core:jersey-common:2.0-m09" level="project" />
+    <orderEntry type="library" name="Gradle: javax.ws.rs:javax.ws.rs-api:2.0-m12" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.guava:guava:13.0" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.hk2:hk2-locator:2.1.30" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.hk2:hk2-api:2.1.30" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.hk2:hk2-utils:2.1.30" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.hk2.external:javax.inject:2.1.30" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.hk2.external:asm-all-repackaged:2.1.30" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.hk2.external:cglib:2.1.30" level="project" />
+    <orderEntry type="library" name="Gradle: org.glassfish.hk2:osgi-resource-locator:1.0.1" level="project" />
+    <orderEntry type="library" name="Gradle: javax.inject:javax.inject:1" level="project" />
+  </component>
+</module>

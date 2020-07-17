@@ -1,6 +1,8 @@
 package App;
 
 import App.model.Model;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -95,7 +97,7 @@ public class MainPage {
 
         Label HostOsVal = new Label(this.getLocalOSVersion());
         Label HostIpAdrsVal = new Label(this.getLocalIP());
-        Label UserNameVal = new Label("g.dlamini");
+        Label UserNameVal = new Label(m.getUsername());
         Label HostMacAdrsVal = new Label(this.getLocalMac());
 
         VBox vBox1 = new VBox(10);
@@ -122,29 +124,29 @@ public class MainPage {
         mainGrid.add(activeappTitleBox, 0, 3, 2, 1);
 
         //focused window icon
-        javafx.scene.image.Image activeAppIcon = new javafx.scene.image.Image(this.getClass().getResource("/metrics-collector.png").toExternalForm());
+        /*javafx.scene.image.Image activeAppIcon = new javafx.scene.image.Image(this.getClass().getResource("/metrics-collector.png").toExternalForm());
         HBox activeAppBox = new HBox(10);
         activeAppBox.setAlignment(Pos.BOTTOM_CENTER);
         activeAppBox.getChildren().add(new ImageView(activeAppIcon));
-        mainGrid.add(activeAppBox, 0, 4,1,1);
+        mainGrid.add(activeAppBox, 0, 4,1,1);*/
 
         //focused window process name
         TextFlow flow = new TextFlow();
-        //flow.setTextAlignment(CENTER);
+        flow.setTextAlignment(CENTER);
         Label windowName = m.getWindowName();//new Text("InelliJIDEA Communiity edition 2020"); //TODO: return from data collector module
         Text focusTime = new Text("00:00:05"); //TODO: Create a timer for each focused window
         flow.getChildren().add(windowName);
 
         VBox focusedVBox = new VBox(10);
-        focusedVBox.setAlignment(Pos.CENTER_LEFT);
+        focusedVBox.setAlignment(Pos.CENTER);
         focusedVBox.getChildren().add(flow);
         focusedVBox.getChildren().add(focusTime);
-        mainGrid.add(focusedVBox,1,4); //add to main grid
+        mainGrid.add(focusedVBox,0,4,2,1); //add to main grid
 
         return mainGrid;
     }
 
-    private GridPane getSettingsTab(){
+    private GridPane getSettingsTab(Model m){
         //Settings tab contents
         GridPane settingsGrid = new GridPane();
         settingsGrid.setAlignment(Pos.CENTER);
@@ -163,13 +165,13 @@ public class MainPage {
         final int initialValue = 5;
         final Label dataCollectIntvlLabel  = new Label("Data Collection interval (min)");
         final Spinner<Integer> dataCollectIntvl = new Spinner<Integer>();
-        SpinnerValueFactory<Integer> VdataCollectValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, initialValue);
+        SpinnerValueFactory<Integer> VdataCollectValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(2, 60, initialValue);
         dataCollectIntvl.setValueFactory(VdataCollectValueFactory);
         dataCollectIntvl.setMaxWidth(70.0);
 
         final Label dataSendIntvLabel = new Label("Data send interval (min)");
         final Spinner<Integer> dataSendIntv = new Spinner<Integer>();
-        SpinnerValueFactory<Integer> dataSendValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, initialValue);
+        SpinnerValueFactory<Integer> dataSendValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 60, 10);
         dataSendIntv.setValueFactory(dataSendValueFactory);
         dataSendIntv.setMaxWidth(70.0);
 
@@ -187,10 +189,23 @@ public class MainPage {
         hbBtn1.getChildren().add(btnSaveSettings);
         settingsGrid.add(hbBtn1, 0, 4,2,1);
 
+        btnSaveSettings.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e){
+                if(m.validSettings(dataSendIntv.getValue().intValue(),dataCollectIntvl.getValue().intValue())){
+                    m.setDataColSendIntvl(dataSendIntv.getValue().intValue(),dataCollectIntvl.getValue().intValue());
+                    System.out.println("Settings saved successful");
+                }
+                else {
+                    System.out.println("Settings saved unsuccessful : data send interval is greater data collect interval ");
+                }
+            }
+        });
+
         return settingsGrid;
     }
 
-    private GridPane getAboutTab(){
+    private GridPane getAboutTab(Model m){
         //About Tab
         GridPane aboutGrid = new GridPane();
         aboutGrid.setAlignment(Pos.CENTER);
@@ -219,12 +234,12 @@ public class MainPage {
         final Label usern = new Label("Logged in as");
         usern.setFont(Font.font( usern.getFont().toString(),FontWeight.BOLD,15 ));
         usern.setTextAlignment(CENTER);
-        final Label versionNumber = new Label("g.dlamini@innopolis.university");
-        versionNumber.setMaxWidth(300);
-        versionNumber.setTextAlignment(CENTER);
-        versionNumber.setWrapText(true);
+        final Label LoginUsername = new Label(m.getLoginUsername());
+        LoginUsername.setMaxWidth(300);
+        LoginUsername.setTextAlignment(CENTER);
+        LoginUsername.setWrapText(true);
         aboutVbox.getChildren().add(usern);
-        aboutVbox.getChildren().add(versionNumber);
+        aboutVbox.getChildren().add(LoginUsername);
         aboutGrid.add(aboutVbox,0,1);
 
         // add logout and update check
@@ -250,11 +265,11 @@ public class MainPage {
         tab1.setContent(mainGrid);
 
         Tab tab2 = new Tab("Settings");
-        GridPane settingsGrid = this.getSettingsTab();
+        GridPane settingsGrid = this.getSettingsTab(m);
         tab2.setContent(settingsGrid);
 
         Tab tab3 = new Tab("About");
-        GridPane aboutGrid = this.getAboutTab();
+        GridPane aboutGrid = this.getAboutTab(m);
         tab3.setContent(aboutGrid);
 
         tabPane.getTabs().add(tab1);

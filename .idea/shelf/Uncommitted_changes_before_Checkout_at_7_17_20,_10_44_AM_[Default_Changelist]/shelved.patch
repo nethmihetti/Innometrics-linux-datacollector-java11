@@ -1,0 +1,68 @@
+Index: .idea/compiler.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project version=\"4\">\n  <component name=\"CompilerConfiguration\">\n    <option name=\"DEFAULT_COMPILER\" value=\"Javac\" />\n    <resourceExtensions />\n    <wildcardResourcePatterns>\n      <entry name=\"!?*.java\" />\n      <entry name=\"!?*.form\" />\n      <entry name=\"!?*.class\" />\n      <entry name=\"!?*.groovy\" />\n      <entry name=\"!?*.scala\" />\n      <entry name=\"!?*.flex\" />\n      <entry name=\"!?*.kt\" />\n      <entry name=\"!?*.clj\" />\n    </wildcardResourcePatterns>\n    <annotationProcessing>\n      <profile default=\"true\" name=\"Default\" enabled=\"false\">\n        <processorPath useClasspath=\"true\" />\n      </profile>\n    </annotationProcessing>\n  </component>\n</project>\n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/compiler.xml	(revision c8da7cdcad37c7172f2b03d5779f528072defd59)
++++ .idea/compiler.xml	(date 1594968223307)
+@@ -1,8 +1,6 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
+   <component name="CompilerConfiguration">
+-    <option name="DEFAULT_COMPILER" value="Javac" />
+-    <resourceExtensions />
+     <wildcardResourcePatterns>
+       <entry name="!?*.java" />
+       <entry name="!?*.form" />
+@@ -14,10 +12,21 @@
+       <entry name="!?*.clj" />
+     </wildcardResourcePatterns>
+     <annotationProcessing>
+-      <profile default="true" name="Default" enabled="false">
+-        <processorPath useClasspath="true" />
++      <profile name="Gradle Imported" enabled="true">
++        <outputRelativeToContentRoot value="true" />
++        <processorPath useClasspath="false">
++          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.12/48e4e5d60309ebd833bc528dcf77668eab3cd72c/lombok-1.18.12.jar" />
++        </processorPath>
++        <module name="innometrics-linux-datacollector-java11.main" />
+       </profile>
+     </annotationProcessing>
++    <bytecodeTargetLevel>
++      <module name="InnoMatricsLinux" target="11" />
++      <module name="InnoMatricsLinux.main" target="11" />
++      <module name="InnoMatricsLinux.test" target="11" />
++      <module name="innometrics-linux-datacollector-java11" target="1.8" />
++      <module name="innometrics-linux-datacollector-java11.main" target="1.8" />
++      <module name="innometrics-linux-datacollector-java11.test" target="1.8" />
++    </bytecodeTargetLevel>
+   </component>
+-</project>
+-
++</project>
+\ No newline at end of file
+Index: .idea/modules.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project version=\"4\">\n  <component name=\"ProjectModuleManager\">\n    <modules>\n      <module fileurl=\"file://$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml\" filepath=\"$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml\" />\n      <module fileurl=\"file://$PROJECT_DIR$/.idea/modules/new.iml\" filepath=\"$PROJECT_DIR$/.idea/modules/new.iml\" />\n    </modules>\n  </component>\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/modules.xml	(revision c8da7cdcad37c7172f2b03d5779f528072defd59)
++++ .idea/modules.xml	(date 1594968223363)
+@@ -2,7 +2,13 @@
+ <project version="4">
+   <component name="ProjectModuleManager">
+     <modules>
++      <module fileurl="file://$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.iml" filepath="$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.iml" />
++      <module fileurl="file://$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.main.iml" filepath="$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.main.iml" />
++      <module fileurl="file://$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.test.iml" filepath="$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.test.iml" />
+       <module fileurl="file://$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml" filepath="$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml" />
++      <module fileurl="file://$PROJECT_DIR$/.idea/modules/innometrics-linux-datacollector-java11.iml" filepath="$PROJECT_DIR$/.idea/modules/innometrics-linux-datacollector-java11.iml" />
++      <module fileurl="file://$PROJECT_DIR$/.idea/modules/innometrics-linux-datacollector-java11.main.iml" filepath="$PROJECT_DIR$/.idea/modules/innometrics-linux-datacollector-java11.main.iml" />
++      <module fileurl="file://$PROJECT_DIR$/.idea/modules/innometrics-linux-datacollector-java11.test.iml" filepath="$PROJECT_DIR$/.idea/modules/innometrics-linux-datacollector-java11.test.iml" />
+       <module fileurl="file://$PROJECT_DIR$/.idea/modules/new.iml" filepath="$PROJECT_DIR$/.idea/modules/new.iml" />
+     </modules>
+   </component>

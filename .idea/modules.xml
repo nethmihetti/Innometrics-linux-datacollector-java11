@@ -2,6 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.iml" filepath="$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.main.iml" filepath="$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.test.iml" filepath="$PROJECT_DIR$/.idea/modules/InnoMatricsLinux.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml" filepath="$PROJECT_DIR$/InnoMetrics-linux-dataCollector-java11.iml" />
       <module fileurl="file://$PROJECT_DIR$/InnoMetricsAPI/InnoMetricsAPI.iml" filepath="$PROJECT_DIR$/InnoMetricsAPI/InnoMetricsAPI.iml" />
       <module fileurl="file://$PROJECT_DIR$/InnoMetricsApp/InnoMetricsApp.iml" filepath="$PROJECT_DIR$/InnoMetricsApp/InnoMetricsApp.iml" />

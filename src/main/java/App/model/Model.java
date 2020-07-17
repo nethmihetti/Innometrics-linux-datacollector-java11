@@ -5,9 +5,11 @@ import App.MainPage;
 import App.SettingsPersister;
 import App.nativeimpl.ActiveWindowInfo;
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import org.jnativehook.GlobalScreen;
 import org.json.JSONArray;
@@ -44,13 +46,14 @@ public class Model {
 	private TrayIcon trayIcon;
 	private JPanel root;
 	public static Label windowName = new Label("None");
-	private String loginUsername;
+	private String loginUsername, username;
 	private PasswordField loginPassword;
 	private final Map<String, Long> timeCount;
 	private long lastUpdateTime, lastSwitchTime;
 	private Runnable watchStopper;
 	private String process;
 	private boolean updateLock;
+	private int dataCollectInvl, dataSendInvl;
 
 	private Model(SettingsPersister settingsImpl) {
 		settings = settingsImpl;
@@ -60,8 +63,9 @@ public class Model {
 	public Model(String settingsFile) {
 		this(SettingsPersister.JsonFilePersister.create(settingsFile));
 		assert Platform.isFxApplicationThread();
-		windowName.setPrefWidth(110);
+		windowName.setPrefWidth(200);
 		windowName.setWrapText(true);
+		windowName.setAlignment(Pos.CENTER);
 	}
 	public void setWindowName(final String newName){
 		windowName.setText(newName);
@@ -79,6 +83,7 @@ public class Model {
 		assert Platform.isFxApplicationThread();
 
 		this.loginUsername = loginUsername;
+		this.username = loginUsername.split("@")[0];
 		this.loginPassword = loginPassword;
 	}
 
@@ -116,6 +121,7 @@ public class Model {
 		assert Platform.isFxApplicationThread(); //make sure its the main thread
 		//Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
 		//watchStopper = ActiveWindowInfo.INSTANCE.startListening(this);
+		System.out.println("Starting watch thread!!");
 		ActiveWindowInfo.INSTANCE.startListening(this);
 	}
 
@@ -123,7 +129,7 @@ public class Model {
 		/*if (watchStopper != null) {
 			//watchStopper.run(); Todo stop watching thread
 		}*/
-		System.out.println("Stopping watching thread!!");
+		System.out.println("Stopping watch thread!!");
 	}
 
 	public void flipToMainPage(Stage window) throws SocketException {
@@ -201,11 +207,28 @@ public class Model {
 			else
 				trayIcon.setToolTip(null);
 	}
-	private String username;
-	public void setUser(String username) {
-		this.username = username;
+
+	public String getUsername() {
+		return this.username;
+	}
+	public String getLoginUsername() {
+		return this.loginUsername;
 	}
 
 	private String token;
 	public void setToken(String token){this.token = token;}
+
+	public void setDataColSendIntvl(final int sendIntvl,final int dataCollectInvl ){
+		this.dataSendInvl = dataCollectInvl ;
+		this.dataCollectInvl = sendIntvl;
+	}
+	public int getDataCollectInvl(){
+		return this.dataCollectInvl;
+	}
+	public int getDataSendInvl(){
+		return dataSendInvl;
+	}
+	public boolean validSettings(final int sendIntvl,final int dataCollectInvl ){
+		return sendIntvl > dataCollectInvl;
+	}
 }
