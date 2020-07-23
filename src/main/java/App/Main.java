@@ -2,6 +2,7 @@ package App;
 
 import App.model.Model;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.stage.Stage;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -20,14 +21,15 @@ import java.util.Date;
 
 public class Main extends Application {
     private Stage window;
-    //Controller loginController = new Controller();
-
 
     public static void main(String[] args) {
-
         launch(args);
     }
 
+    public Stage getMainWindow(){
+        assert Platform.isFxApplicationThread();
+        return this.window;
+    }
     @Override
     public void start(Stage primaryStage) throws IOException {
         window = primaryStage;
@@ -42,14 +44,13 @@ public class Main extends Application {
 
         JSONObject userSettings = readSettings(settingsPath);
 
-        if(userSettings.get("token") != null){ //and not expired
+        if(userSettings.get("token") != null && tokenIsValid(userSettings.getOrDefault("tokenDate","2000-01-01").toString())){ //and not expired
             //open main window without login page
-            if (tokenIsValid(userSettings.get("tokenDate").toString())){
-                System.out.println("111111");
-            }
-            System.out.println("My token is : " + userSettings.get("token") );
-            userModel.flipToMainPage(window);
 
+            System.out.println("My token is : " + userSettings.get("token") );
+            System.out.println("My token date : " + userSettings.get("tokenDate") );
+
+            userModel.flipToMainPage(window);
         }
         else {
             System.out.println("Login first!!");
@@ -62,9 +63,7 @@ public class Main extends Application {
     private JSONObject readSettings(final String settingsPath){
         JSONObject results = null;
         try{
-            Path p = Paths.get(this.getClass().getResource(settingsPath).getPath()).toAbsolutePath();
-            System.out.println(Files.isReadable(p));
-            FileReader reader = new FileReader(this.getClass().getResource("/config.json").getPath());
+            FileReader reader = new FileReader(this.getClass().getResource(settingsPath).getPath());
             JSONParser jsonParser = new JSONParser();
 
             results = (JSONObject) jsonParser.parse(reader);
@@ -98,23 +97,14 @@ public class Main extends Application {
 
             //in days
             long diff = d2.getTime() - d1.getTime();
-
             long diffDays = diff / (24 * 60 * 60 * 1000);
 
-            System.out.print(diffDays + " days, ");
-
-            if (diffDays < 30){
-                return true;
-            }
-            else {
-                return false;
-            }
-
+            return diffDays < 30;
 
         } catch (Exception e) {
             System.out.println("Token Date exception");
             return false;
-            //e.printStackTrace();
         }
     }
+
 }

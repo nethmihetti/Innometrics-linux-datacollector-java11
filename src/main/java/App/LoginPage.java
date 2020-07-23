@@ -77,8 +77,8 @@ public class LoginPage {
         scenetitle.setMaxWidth(Double.MAX_VALUE);
         scenetitle.setAlignment(Pos.CENTER);
         scenetitle.setFont(Font.font("Verdana", FontWeight.BOLD, 20));
-        scenetitle.setPadding(new Insets(25, 25, 10, 25));
-        loginGrid.add(scenetitle, 0, 0, 3, 1);
+        scenetitle.setPadding(new Insets(25, 25, 25, 25));
+        loginGrid.add(scenetitle, 0, 0, 2, 1);
 
         //Adding Nodes to loin GridPane layout
         Label userName = new Label("Login");
@@ -121,9 +121,7 @@ public class LoginPage {
                     String loginRes = login(username, password);
 
                     if(!loginRes.equals("")) {
-                        //lblMessage.setFill(Color.GREEN);
-                        m.setUser(username);
-                        m.setToken(loginRes);
+                        m.updateLoinSettings(loginRes,username,passwordField);
                         lblMessage.setText("Login Success");
                         loggedIn();
                         m.flipToMainPage(window);
@@ -139,7 +137,7 @@ public class LoginPage {
             }
         });
 
-        Scene LoginScene = new Scene(loginGrid, 300, 275);
+        Scene LoginScene = new Scene(loginGrid, 360, 350);
 
         return LoginScene;
     }

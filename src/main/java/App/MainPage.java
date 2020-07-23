@@ -1,6 +1,9 @@
 package App;
 
 import App.model.Model;
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -15,16 +18,19 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import static javafx.scene.text.TextAlignment.CENTER;
+import javafx.scene.image.Image;
+import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.*;
 import java.util.Enumeration;
 import java.util.Locale;
+import java.util.Optional;
 
 public class MainPage {
     public MainPage(){}
 
-    private String getLocalIP(){
+    public static String getLocalIP(){
         //Get IP-address
         String HostIp = "";
         try(final DatagramSocket socket = new DatagramSocket()){
@@ -35,7 +41,7 @@ public class MainPage {
         }
         return HostIp;
     }
-    private String getLocalMac() throws SocketException {
+    public static String getLocalMac() throws SocketException {
         //Get MAC-address
         String macAdrs = "";
         Enumeration<NetworkInterface> networks = NetworkInterface.getNetworkInterfaces();
@@ -55,7 +61,7 @@ public class MainPage {
         return macAdrs;
     }
 
-    private String getLocalOSVersion(){
+    public static String getLocalOSVersion(){
         String osName = "";
         String osVersion = "";
         try {
@@ -95,8 +101,9 @@ public class MainPage {
 
         Label HostOsVal = new Label(this.getLocalOSVersion());
         Label HostIpAdrsVal = new Label(this.getLocalIP());
-        Label UserNameVal = new Label("g.dlamini");
+        Label UserNameVal = new Label(m.getUsername());
         Label HostMacAdrsVal = new Label(this.getLocalMac());
+
 
         VBox vBox1 = new VBox(10);
         vBox1.setAlignment(Pos.CENTER_LEFT);
@@ -122,29 +129,49 @@ public class MainPage {
         mainGrid.add(activeappTitleBox, 0, 3, 2, 1);
 
         //focused window icon
-        javafx.scene.image.Image activeAppIcon = new javafx.scene.image.Image(this.getClass().getResource("/metrics-collector.png").toExternalForm());
+        /*javafx.scene.image.Image activeAppIcon = new javafx.scene.image.Image(this.getClass().getResource("/metrics-collector.png").toExternalForm());
         HBox activeAppBox = new HBox(10);
         activeAppBox.setAlignment(Pos.BOTTOM_CENTER);
         activeAppBox.getChildren().add(new ImageView(activeAppIcon));
-        mainGrid.add(activeAppBox, 0, 4,1,1);
+        mainGrid.add(activeAppBox, 0, 4,1,1);*/
 
         //focused window process name
         TextFlow flow = new TextFlow();
-        //flow.setTextAlignment(CENTER);
-        Label windowName = m.getWindowName();//new Text("InelliJIDEA Communiity edition 2020"); //TODO: return from data collector module
-        Text focusTime = new Text("00:00:05"); //TODO: Create a timer for each focused window
+        flow.setTextAlignment(CENTER);
+        Label windowName = m.getWindowName();
+        //Text focusTime = new Text("00:00:05"); //TODO: Create a timer for each focused window
         flow.getChildren().add(windowName);
 
         VBox focusedVBox = new VBox(10);
-        focusedVBox.setAlignment(Pos.CENTER_LEFT);
+        focusedVBox.setAlignment(Pos.CENTER);
         focusedVBox.getChildren().add(flow);
-        focusedVBox.getChildren().add(focusTime);
-        mainGrid.add(focusedVBox,1,4); //add to main grid
+        //focusedVBox.getChildren().add(focusTime);
+        mainGrid.add(focusedVBox,0,4,2,1); //add to main grid
+
+        Button stopCloseButton = new Button();
+        stopCloseButton.setStyle("-fx-background-color: #399cbd; -fx-text-fill: white");
+        stopCloseButton.setText("Stop and Quit");
+        stopCloseButton.setFont(Font.font("Verdana",FontWeight.BOLD,15));
+        stopCloseButton.setPadding(new Insets(10));
+
+        stopCloseButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e){
+                m.shutdown();
+            }
+        });
+
+        HBox stopCloseHbox = new HBox(10);
+        stopCloseHbox.setAlignment(Pos.CENTER);
+        stopCloseHbox.setPadding(new Insets(10));
+        stopCloseHbox.getChildren().add(stopCloseButton);
+
+        mainGrid.add(stopCloseHbox,0,5,2,1);
 
         return mainGrid;
     }
 
-    private GridPane getSettingsTab(){
+    private GridPane getSettingsTab(Model m){
         //Settings tab contents
         GridPane settingsGrid = new GridPane();
         settingsGrid.setAlignment(Pos.CENTER);
@@ -163,13 +190,13 @@ public class MainPage {
         final int initialValue = 5;
         final Label dataCollectIntvlLabel  = new Label("Data Collection interval (min)");
         final Spinner<Integer> dataCollectIntvl = new Spinner<Integer>();
-        SpinnerValueFactory<Integer> VdataCollectValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, initialValue);
-        dataCollectIntvl.setValueFactory(VdataCollectValueFactory);
+        SpinnerValueFactory<Integer> dataCollectValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(2, 60, initialValue);
+        dataCollectIntvl.setValueFactory(dataCollectValueFactory);
         dataCollectIntvl.setMaxWidth(70.0);
 
         final Label dataSendIntvLabel = new Label("Data send interval (min)");
         final Spinner<Integer> dataSendIntv = new Spinner<Integer>();
-        SpinnerValueFactory<Integer> dataSendValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, initialValue);
+        SpinnerValueFactory<Integer> dataSendValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 60, 10);
         dataSendIntv.setValueFactory(dataSendValueFactory);
         dataSendIntv.setMaxWidth(70.0);
 
@@ -187,20 +214,37 @@ public class MainPage {
         hbBtn1.getChildren().add(btnSaveSettings);
         settingsGrid.add(hbBtn1, 0, 4,2,1);
 
+        btnSaveSettings.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e){
+                if(m.validSettings(dataSendIntv.getValue().intValue(),dataCollectIntvl.getValue().intValue())){
+                    m.setDataColSendIntvl(dataSendIntv.getValue().intValue(),dataCollectIntvl.getValue().intValue());
+                    System.out.println("Settings saved successful");
+                }
+                else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Settings Save Error");
+                    alert.setHeaderText("Settings save unsuccessful");
+                    alert.setContentText("The data send interval is greater data collect interval ");
+
+                    alert.showAndWait();
+                }
+            }
+        });
+
         return settingsGrid;
     }
 
-    private GridPane getAboutTab(){
+    private GridPane getAboutTab(Model m){
         //About Tab
         GridPane aboutGrid = new GridPane();
         aboutGrid.setAlignment(Pos.CENTER);
-        //aboutGrid.setGridLinesVisible(true);
         aboutGrid.setHgap(10);
         aboutGrid.setVgap(10);
         aboutGrid.setPadding(new Insets(10, 5, 10, 5));
 
         //Add InnoMetrics Icon
-        javafx.scene.image.Image image = new javafx.scene.image.Image(this.getClass().getResource("/metrics-collector.png").toExternalForm());
+        Image image = new Image(this.getClass().getResource("/metrics-collector.png").toExternalForm());
         HBox hbimg = new HBox(10);
         hbimg.setAlignment(Pos.BOTTOM_CENTER);
         hbimg.getChildren().add(new ImageView(image));
@@ -219,24 +263,45 @@ public class MainPage {
         final Label usern = new Label("Logged in as");
         usern.setFont(Font.font( usern.getFont().toString(),FontWeight.BOLD,15 ));
         usern.setTextAlignment(CENTER);
-        final Label versionNumber = new Label("g.dlamini@innopolis.university");
-        versionNumber.setMaxWidth(300);
-        versionNumber.setTextAlignment(CENTER);
-        versionNumber.setWrapText(true);
+        final Label LoginUsername = new Label(m.getLoginUsername());
+        LoginUsername.setMaxWidth(300);
+        LoginUsername.setTextAlignment(CENTER);
+        LoginUsername.setWrapText(true);
         aboutVbox.getChildren().add(usern);
-        aboutVbox.getChildren().add(versionNumber);
+        aboutVbox.getChildren().add(LoginUsername);
         aboutGrid.add(aboutVbox,0,1);
 
         // add logout and update check
         HBox hboxLogInUpdate = new HBox(15);
         hboxLogInUpdate.setAlignment(Pos.BOTTOM_CENTER);
-        Button updateBtn = new Button("Update");
-        updateBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
-        Button loginBtn = new Button("Logout");
-        loginBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
+        //Button updateBtn = new Button("Update");
+        //updateBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
+        Button logOutBtn = new Button("Logout");
+        logOutBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
         hboxLogInUpdate.setPadding(new Insets(20,0,5,0));
-        hboxLogInUpdate.getChildren().addAll(updateBtn, loginBtn);
+        hboxLogInUpdate.getChildren().addAll(logOutBtn);
         aboutGrid.add(hboxLogInUpdate,0,2);
+
+        logOutBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e){
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Sign out Confirmation");
+                alert.setHeaderText("This action will log you out and reset your settings");
+                alert.setContentText("Are you ok with this?");
+
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    try {
+                        m.endWatching(true);
+                        m.flipToLoginPage((Stage) logOutBtn.getScene().getWindow());
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
+                    }
+
+                }
+            }
+        });
 
         return aboutGrid;
     }
@@ -250,11 +315,11 @@ public class MainPage {
         tab1.setContent(mainGrid);
 
         Tab tab2 = new Tab("Settings");
-        GridPane settingsGrid = this.getSettingsTab();
+        GridPane settingsGrid = this.getSettingsTab(m);
         tab2.setContent(settingsGrid);
 
         Tab tab3 = new Tab("About");
-        GridPane aboutGrid = this.getAboutTab();
+        GridPane aboutGrid = this.getAboutTab(m);
         tab3.setContent(aboutGrid);
 
         tabPane.getTabs().add(tab1);

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="unitTests" tests="3" skipped="0" failures="0" errors="0" timestamp="2020-07-23T15:15:50" hostname="user-W65-67SF" time="5.018">
+  <properties/>
+  <testcase name="model_class_test" classname="unitTests" time="5.012"/>
+  <testcase name="activity_class_constructor_test" classname="unitTests" time="0.003"/>
+  <testcase name="activity_class_json_convert_test" classname="unitTests" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
