@@ -27,7 +27,8 @@ import java.net.http.HttpResponse;
 public class LoginPage {
     public LoginPage(){}
 
-    private static final String uri = "https://innometric.guru:9091/login";
+    //private static final String uri = "https://innometric.guru:9091/login"; //production server
+    private static final String uri = "http://10.90.138.244:9091/login"; //dev server
     public static String token = "";
 
     private static String login(String username, String password) throws JSONException {
@@ -82,10 +83,12 @@ public class LoginPage {
 
         //Adding Nodes to loin GridPane layout
         Label userName = new Label("Login");
-        final TextField txtUserName = new TextField("g.dlamini@innopolis.university");
+        //final TextField txtUserName = new TextField("g.dlamini@innopolis.university");
+        final TextField txtUserName = new TextField("test@gmail.com");
         Label lblPassword = new Label("Password");
         final PasswordField passwordField = new PasswordField();
-        passwordField.setText("InnoMetrics$2020");
+        //passwordField.setText("InnoMetrics$2020");
+        passwordField.setText("testpass");
 
         //Login Button
         Button btnLogin = new Button("Login");

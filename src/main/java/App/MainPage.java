@@ -157,7 +157,20 @@ public class MainPage {
         stopCloseButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e){
-                m.shutdown();
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Sign out Confirmation");
+                alert.setHeaderText("Are you sure you want to quit the Data collector?");
+                alert.setContentText("Do you really want to quit \"Innometrics Data Collector\" ?");
+
+                ButtonType buttonYes = new ButtonType("Yes");
+                ButtonType buttonCancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+                alert.getButtonTypes().setAll(buttonYes,buttonCancel);
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == buttonYes){
+                    m.shutdown();
+                }
+
             }
         });
 

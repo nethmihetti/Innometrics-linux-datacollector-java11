@@ -5,15 +5,8 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -42,7 +35,7 @@ public class Main extends Application {
         String settingsPath = "/config.json";
         Model userModel = new Model(settingsPath);
 
-        JSONObject userSettings = readSettings(settingsPath);
+        JSONObject userSettings = userModel.getUserSettingsJSON();
 
         if(userSettings.get("token") != null && tokenIsValid(userSettings.getOrDefault("tokenDate","2000-01-01").toString())){ //and not expired
             //open main window without login page
@@ -60,30 +53,8 @@ public class Main extends Application {
         window.show();
 
     }
-    private JSONObject readSettings(final String settingsPath){
-        JSONObject results = null;
-        try{
-            FileReader reader = new FileReader(this.getClass().getResource(settingsPath).getPath());
-            JSONParser jsonParser = new JSONParser();
 
-            results = (JSONObject) jsonParser.parse(reader);
-        } catch (ParseException e) {
-            System.out.println("settings JSON ParseException");
-            //e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            System.out.println(settingsPath + " : File not found");
-            //create a new settings file
-            return new JSONObject();
-            //e.printStackTrace();
-        } catch (IOException e) {
-            System.out.println("File IO Error");
-            return null;
-            //e.printStackTrace();
-        }
-
-        return results;
-    }
-    private boolean tokenIsValid(final String tokenDate){
+    private boolean tokenIsValid(final String tokenDate){ //Todo: Move to helper methods
         LocalDate today = LocalDate.now();
         today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
