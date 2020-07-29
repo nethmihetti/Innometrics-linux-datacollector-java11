@@ -1,5 +1,7 @@
 package App.nativeimpl;
 
+import App.Activity;
+import App.SystemProcess;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.platform.unix.X11;
@@ -7,12 +9,17 @@ import App.model.Model;
 import javafx.application.Platform;
 import jnacontrib.x11.api.X;
 import jnacontrib.x11.api.X.X11Exception;
+import org.json.JSONException;
 
-import javax.swing.*;
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class X11ProcFsWindowInfo extends ActiveWindowInfo {
@@ -49,6 +56,37 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 		}
 	}
 
+	public void getActivity(String pid, String title, String process, final Model m){
+		try{
+			String[] args = new String[] {"/bin/bash", "-c", "ps -o user= -o %mem= -o %cpu= -o stat= -o command= -p "+pid };
+			Process proc = new ProcessBuilder(args).start();
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+			String line = reader.readLine();
+			if (line != null){
+				String[] a = line.split("\\s+");
+				Clock clock = Clock.systemDefaultZone();
+				Instant instant = clock.instant();
+				HashMap hashMap = new HashMap();
+				hashMap.put("start_time",instant.toString());
+				hashMap.put("activityType",a[0]);
+				hashMap.put("idle_activity",a[3]);
+				hashMap.put("executable_name",process);
+				hashMap.put("browser_title",title);
+				hashMap.put("pid",pid);
+
+				Activity currentActivity = new Activity();
+				currentActivity.setActivityValues(m,hashMap);
+				m.setAddActivity(currentActivity);
+			}
+			proc.waitFor();
+
+		}catch (IOException | InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public String getActiveWindowTitle() {
 		try {
 			return display.getActiveWindow().getTitle();
@@ -74,7 +112,6 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 	}
 	public void runTask(Model m){
 		display = new X.Display();
-		//m.setProcess(getActiveWindowApplication());
 		final AtomicBoolean stop = new AtomicBoolean(false);
 
 		X11.XEvent event = new X11.XEvent();
@@ -91,26 +128,50 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 					case X11.PropertyNotify:
 						if (X11.INSTANCE.XGetAtomName(display.getX11Display(), event.xproperty.atom).equals("_NET_ACTIVE_WINDOW") && display.getActiveWindow().getID() != 0) {
 							int nowProcess = display.getActiveWindow().getPID().intValue();
-							if (nowProcess != currentProcess) {
+							if (nowProcess != currentProcess ) {
 								currentProcess = nowProcess;
 								final String title = getActiveWindowTitle();
 								final String process = getActiveWindowApplication();
 								Platform.runLater(new Runnable() {
 									@Override
 									public void run() {
-										System.out.println("SWITCHED TO " + title);
-										System.out.println("PROCESS NAME : " + process);
+										getActivity(String.valueOf(nowProcess),title,process,m);
+										System.out.println("TITLE: " + title);
 										m.setWindowName(process);
-										//m.setProcess(process);
 									}
 								});
+								m.setActivityEndTime();
 							}
 						}
 						break;
 				}
 			}
-		} catch (X11Exception e) {
+		} catch (X11Exception | JSONException e) {
 			throw new RuntimeException(e);
+		}
+	}
+
+	public void startWatchigProcesses(Model m){
+		try{
+			String[] args = new String[] {"/bin/bash", "-c", "ps -aux --no-header"};
+			Process proc = new ProcessBuilder(args).start();
+
+			Clock clock = Clock.systemDefaultZone();
+			Instant instant = clock.instant();
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			String line = null;
+
+			while((line = reader.readLine())!= null ){
+				String[] processLine = line.split("\\s+");
+				HashMap hashMap = new HashMap();
+				hashMap.put("start_time",instant.toString());
+				SystemProcess tempProc = new SystemProcess();
+			}
+			proc.waitFor();
+
+		}catch (IOException | InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 }

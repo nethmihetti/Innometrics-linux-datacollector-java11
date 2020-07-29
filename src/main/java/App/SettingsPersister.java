@@ -99,4 +99,8 @@ public class SettingsPersister {
             ex.printStackTrace();
         }
     }
+
+    public JSONObject getAllSettingsJson(){
+        return this.cache;
+    }
 }

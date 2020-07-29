@@ -1,13 +1,11 @@
 package App;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.List;
 
 public class DataCollectorAPI {
 
@@ -47,12 +45,12 @@ public class DataCollectorAPI {
             throw new RuntimeException(ex);
         }
     }
-    void postProcessReport(Process[] processes) {
+    void postProcessReport(SystemProcess[] processes) {
 
         HttpClient client = HttpClient.newBuilder().build();
         JSONArray allProcesses = new JSONArray();
 
-        for (Process p : processes) { allProcesses.put(p); }
+        for (SystemProcess p : processes) { allProcesses.put(p); }
 
         HttpRequest request = HttpRequest.newBuilder()
                 .header("Content-Type", "application/json")

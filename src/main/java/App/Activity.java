@@ -1,7 +1,11 @@
 package App;
 import App.model.Model;
+import javafx.application.Platform;
 import org.json.JSONException;
 import org.json.simple.JSONObject;
+
+import java.util.HashMap;
+import java.util.Timer;
 
 public class Activity {
     private int activityID = -1;
@@ -10,7 +14,7 @@ public class Activity {
     private String browser_url = "";
     private String end_time = "";
     private String executable_name = "";
-    private Boolean idle_activity= null;
+    private String idle_activity= "ss";
     private String ip_address= "";
     private String mac_address= "";
     private String osversion= "";
@@ -34,14 +38,25 @@ public class Activity {
         result.put("pid",pid);
         result.put("start_time",start_time);
         result.put("userID",userID);
+        result.put("executable_name",executable_name);
 
         return result;
     }
-    public void setActivityValues(Model m){
-        System.out.println("Setting activity values");
+    public void setActivityValues(Model m, HashMap <String,String>values){
+        //System.out.println("Setting activity values");
         this.mac_address = Model.currentMAC;
         this.ip_address = Model.currentIP;
         this.osversion = Model.currentOS;
         this.userID = m.getUsername();
+        this.pid = values.getOrDefault("pid","none");
+        this.browser_title = values.getOrDefault("browser_title","none");
+        this.executable_name = values.getOrDefault("executable_name","none");
+        this.activityType = values.getOrDefault("activityType","none");
+        this.start_time = values.getOrDefault("start_time","00:00:00");
+        //this.idle_activity = values.getOrDefault("idle_activity","Ss");
+        this.idle_activity = "false";
+    }
+    public void setEndTime(String time){
+        this.end_time = time;
     }
 }
