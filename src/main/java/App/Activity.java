@@ -47,7 +47,7 @@ public class Activity {
         this.mac_address = Model.currentMAC;
         this.ip_address = Model.currentIP;
         this.osversion = Model.currentOS;
-        this.userID = m.getUsername();
+        this.userID = m.getLoginUsername();
         this.pid = values.getOrDefault("pid","none");
         this.browser_title = values.getOrDefault("browser_title","none");
         this.executable_name = values.getOrDefault("executable_name","none");

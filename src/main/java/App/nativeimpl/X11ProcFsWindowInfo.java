@@ -19,6 +19,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -67,9 +69,9 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 			if (line != null){
 				String[] a = line.split("\\s+");
 				Clock clock = Clock.systemDefaultZone();
-				Instant instant = clock.instant();
+				ZonedDateTime t = clock.instant().atZone(ZoneId.systemDefault());
 				HashMap hashMap = new HashMap();
-				hashMap.put("start_time",instant.toString());
+				hashMap.put("start_time",t.toLocalDateTime().toString());
 				hashMap.put("activityType",a[0]);
 				hashMap.put("idle_activity",a[3]);
 				hashMap.put("executable_name",process);
@@ -103,11 +105,8 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 				runTask(m);
 			}
 		};
-		// Run the task in a background thread
 		Thread backgroundThread = new Thread(task);
-		// Terminate the running thread if the application exits
 		backgroundThread.setDaemon(true);
-		// Start the thread
 		backgroundThread.start();
 	}
 	public void runTask(Model m){
@@ -148,30 +147,6 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 			}
 		} catch (X11Exception | JSONException e) {
 			throw new RuntimeException(e);
-		}
-	}
-
-	public void startWatchigProcesses(Model m){
-		try{
-			String[] args = new String[] {"/bin/bash", "-c", "ps -aux --no-header"};
-			Process proc = new ProcessBuilder(args).start();
-
-			Clock clock = Clock.systemDefaultZone();
-			Instant instant = clock.instant();
-
-			BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			String line = null;
-
-			while((line = reader.readLine())!= null ){
-				String[] processLine = line.split("\\s+");
-				HashMap hashMap = new HashMap();
-				hashMap.put("start_time",instant.toString());
-				SystemProcess tempProc = new SystemProcess();
-			}
-			proc.waitFor();
-
-		}catch (IOException | InterruptedException e) {
-			e.printStackTrace();
 		}
 	}
 }

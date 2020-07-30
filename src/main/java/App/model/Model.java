@@ -1,9 +1,6 @@
 package App.model;
 
-import App.Activity;
-import App.LoginPage;
-import App.MainPage;
-import App.SettingsPersister;
+import App.*;
 import App.nativeimpl.ActiveWindowInfo;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -18,8 +15,10 @@ import org.json.simple.JSONObject;
 
 
 import java.awt.*;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -28,30 +27,31 @@ import java.net.http.HttpResponse;
 import java.sql.*;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 
 public class Model {
 
 	private final SettingsPersister settings;
 	private TrayIcon trayIcon;
-	public volatile Label windowName = new Label("None");
+	public volatile Label windowName = new Label("Application");
 	private String loginUsername, username;
 	private PasswordField loginPassword;
-	private final Map<String, Long> timeCount;
-	private long lastSwitchTime;
-	public String process = new String("1111");
 	private int dataCollectInvl, dataSendInvl;
 	private String token;
 	public static String currentIP, currentMAC, currentOS;
 	private Activity currentActivity = null;
-	public Connection conn = null;
-	public PreparedStatement insetStmt = null;
-	ArrayList <Activity> listActivities = new ArrayList<Activity>();
+	private Connection conn = null;
+	private PreparedStatement insetStmt, ProcsinsetStmt = null;
 	Queue <Activity> activitiesQueue = new LinkedList<>();
+	Queue <SystemProcess> processesQueue = new LinkedList<>();
 
 	//constructor
 	public Model(String settingsFile) {
@@ -60,7 +60,6 @@ public class Model {
 		this.windowName.setWrapText(true);
 		this.windowName.setAlignment(Pos.CENTER);
 		this.loginUsername = "";
-		timeCount = new HashMap<String, Long>();
 		initDatabase();
 	}
 
@@ -91,6 +90,12 @@ public class Model {
 	}
 	public void shutdown(){
 		System.out.println("Data Collector is shutting down!");
+		try{
+			cleanDb();
+			this.conn.close();
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
 		Platform.exit();
 	}
 
@@ -122,7 +127,6 @@ public class Model {
 		LoginPage startPage = new LoginPage();
 		window.setScene(startPage.constructLoginPage(this,window));
 	}
-
 	public String getLoggedInSessionToken() {
 		return this.token;
 	}
@@ -178,8 +182,9 @@ public class Model {
 	public void setActivityEndTime() throws JSONException {
 		if (this.currentActivity != null){
 			Clock clock = Clock.systemDefaultZone();
-			Instant t = clock.instant();
-			this.currentActivity.setEndTime(t.toString());
+			ZonedDateTime t = clock.instant().atZone(ZoneId.systemDefault());
+			//System.out.println(t.toLocalDateTime().toString());
+			this.currentActivity.setEndTime(t.toLocalDateTime().toString());
 			this.activitiesQueue.add(this.currentActivity);
 		}
 	}
@@ -201,13 +206,14 @@ public class Model {
 		}
 		try {
 			insetStmt = this.conn.prepareStatement("INSERT INTO Activities(activityType, browser_title, browser_url, end_time, executable_name, idle_activity, ip_address, mac_address, osversion," +
-					" pid, start_time, userID) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+					" pid, start_time, userID, posted) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			ProcsinsetStmt = this.conn.prepareStatement("INSERT INTO processesReports(collectedTime, ip_address, mac_address, alternativeLabel, capturedDate, measurementTypeId, value, osversion," +
+					" pid, userID, posted) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		}
 		catch (SQLException ex){
 			ex.printStackTrace();
 		}
 	}
-
 	private void createTable(Connection conn){
 		try{
 			String sql = "CREATE TABLE IF NOT EXISTS Activities (\n"
@@ -223,17 +229,35 @@ public class Model {
 					+ " osversion text,\n"
 					+ " pid text,\n"
 					+ " start_time text,\n"
-					+ " userID text\n"
+					+ " userID text,\n"
+					+ " posted text\n"
 					+ ");";
 
 			Statement createStmt = conn.createStatement();
 			createStmt.execute(sql);
+
+			String processesTable = "CREATE TABLE IF NOT EXISTS processesReports (\n"
+					+ " ProcID INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+					+ " collectedTime text,\n"
+					+ " ip_address text,\n"
+					+ " mac_address text,\n"
+					+ " alternativeLabel text,\n"
+					+ " capturedDate text,\n"
+					+ " measurementTypeId text,\n"
+					+ " value text,\n"
+					+ " osversion text,\n"
+					+ " pid text,\n"
+					+ " userID text,\n"
+					+ " posted text\n"
+					+ ");";
+
+			Statement createProcessTableStmt = conn.createStatement();
+			createProcessTableStmt.execute(processesTable);
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
 
 	}
-
 	private Connection ConnectToDB(String dbPath) {
 		//Registering the Driver
 		Connection conn = null;
@@ -270,6 +294,7 @@ public class Model {
 					insetStmt.setString(10, (String) activityJson.get("pid"));
 					insetStmt.setString(11, (String) activityJson.get("start_time"));
 					insetStmt.setString(12, (String) activityJson.get("userID"));
+					insetStmt.setString(13, "no");
 					insetStmt.executeUpdate();
 
 				} catch (SQLException | JSONException ex) {
@@ -278,7 +303,6 @@ public class Model {
 			}
 		}
 	}
-
 	private void startPostActivitiesToDB(){
 		Runnable task = new Runnable() {
 			@Override
@@ -306,20 +330,6 @@ public class Model {
 		backgroundThread.setDaemon(true);
 		// Start the thread
 		backgroundThread.start();
-	}
-
-	/**
-	 * This method adds a process to local database
-	 */
-	public void addProcessToDb(){
-
-	}
-
-	/**
-	 * This method periodically (thread running in background) a posts processes collected data to remote database
-	 */
-	public void postProcesses(){
-
 	}
 
 	/**
@@ -357,7 +367,7 @@ public class Model {
 	}
 
 	/**
-	 * read data from local database and send it to remote database
+	 * read data from local database and send it to remote database (activities)
 	 * @throws JSONException
 	 */
 	public void sendData() throws JSONException {
@@ -367,14 +377,15 @@ public class Model {
 
 		//read from bd and set field sent to true
 		Statement stmt = null;
+		List <Integer>toUpdateIDs = new ArrayList<>();
 		try {
 			stmt = this.conn.createStatement();
-			ResultSet rs = stmt.executeQuery( "SELECT * FROM activities;" );
+			ResultSet rs = stmt.executeQuery( "SELECT * FROM activities WHERE posted='no';" );
 
 			while ( rs.next() ) {
 				JSONObject temp = new JSONObject();
-				String activityID = rs.getString("activityID");
-				temp.put("activityID",activityID);
+				int activityID = rs.getInt("activityID");
+				temp.put("activityID",String.valueOf(activityID));
 				String activityType = rs.getString("activityType");
 				temp.put("activityType",activityType);
 				String browser_title=  rs.getString("browser_title");
@@ -403,16 +414,14 @@ public class Model {
 				temp.put("userID",userID);
 
 				result.add(temp);
-
-				//rs.update
-
+				toUpdateIDs.add(activityID);
 			}
 			rs.close();
 			stmt.close();
 		} catch ( Exception e ) {
 			System.err.println( e.getClass().getName() + ": " + e.getMessage() );
 		}
-		System.out.println("Operation done successfully");
+
 		if(result.isEmpty()){
 			return;
 		}
@@ -433,10 +442,120 @@ public class Model {
 		try {
 			HttpResponse<?> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 			System.out.println("Send data Status code : "+response.statusCode());
+			if (response.statusCode() == 200){
+				//update posted field to 'yes'
+				String updateids = "("+ toUpdateIDs.stream().map(Object::toString)
+						.collect(Collectors.joining(", ")) + ");";
+				System.out.println(updateids);
+				Statement updateStmt = this.conn.createStatement();
+				String updateQuery = "UPDATE activities set posted='yes' WHERE activityID IN "+updateids;
+				updateStmt.executeUpdate(updateQuery);
+			}
 		} catch (Exception ex) {
 			throw new RuntimeException(ex);
 		}
+	}
 
+	/**
+	 * This method adds a process to local database
+	 */
+	public void addProcessesToDb(){
+		while(!processesQueue.isEmpty()) {
+			SystemProcess tempProcess = processesQueue.remove();
+			if (this.conn != null && this.ProcsinsetStmt != null) {
+				try {
+					JSONObject processJson = tempProcess.toJson();
+					ProcsinsetStmt.setString(1, (String) processJson.get("collectedTime"));
+					ProcsinsetStmt.setString(2, (String) processJson.get("ip_address"));
+					ProcsinsetStmt.setString(3, (String) processJson.get("mac_address"));
+
+					ProcsinsetStmt.setString(4, (String) processJson.get("alternativeLabel"));
+					ProcsinsetStmt.setString(5, (String) processJson.get("capturedDate"));
+					ProcsinsetStmt.setString(6, (String) processJson.get("measurementTypeId"));
+					ProcsinsetStmt.setString(7, (String) processJson.get("value"));
+
+					ProcsinsetStmt.setString(8, (String) processJson.get("osversion"));
+					ProcsinsetStmt.setString(9, (String) processJson.get("pid"));
+					ProcsinsetStmt.setString(10, (String) processJson.get("userID"));
+					ProcsinsetStmt.setString(11, "no");
+					ProcsinsetStmt.executeUpdate();
+
+				} catch (SQLException | JSONException ex) {
+					ex.printStackTrace();
+				}
+			}
+		}
+	}
+
+	/**
+	 * This method periodically (thread running in background) a posts processes collected data to remote database
+	 */
+	public void postProcesses(){
+
+	}
+
+	private void cleanDb(){
+		if (this.conn != null){
+			try {
+				//clear the activities table
+				Statement deleteStmt = this.conn.createStatement();
+				String deleteQuery = "DELETE from activities WHERE posted='yes';";
+				deleteStmt.executeUpdate(deleteQuery);
+
+				//clear the processes table
+				Statement deleteStmtprocs = this.conn.createStatement();
+				String deleteQueryProcs = "DELETE from processesReports where posted='yes';";
+				deleteStmtprocs.executeUpdate(deleteQueryProcs);
+
+			} catch (SQLException throwables) {
+				throwables.printStackTrace();
+			}
+		}
+	}
+
+	public void startWatchigProcesses(){
+		try{
+			String[] args = new String[] {"/bin/bash", "-c", "ps -aux --no-header"};
+			Process proc = new ProcessBuilder(args).start();
+
+			Clock clock = Clock.systemDefaultZone();
+			ZonedDateTime t = clock.instant().atZone(ZoneId.systemDefault());
+			String captureTime = t.toLocalDateTime().toString();
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			String line = null;
+
+			JSONArray allProcesses = new JSONArray();
+
+			while((line = reader.readLine())!= null ){
+				String[] processLine = line.split("\\s+");
+				String pid = processLine[1];
+				SystemProcess tempProc = new SystemProcess();
+
+				Map <String, JSONObject> measurements = new HashMap<>();
+
+				JSONObject cpu = new JSONObject();
+				cpu.put("alternativeLabel", "CPU%");
+				cpu.put("capturedDate", captureTime);
+				cpu.put("measurementTypeId", 1);
+				cpu.put("value", processLine[2]);
+				measurements.put("cpu",cpu);
+
+				JSONObject mem = new JSONObject();
+				cpu.put("alternativeLabel", "MEM%");
+				cpu.put("capturedDate", captureTime);
+				cpu.put("measurementTypeId", "1");
+				cpu.put("value", processLine[3]);
+				measurements.put("mem",mem);
+
+				tempProc.setProcessValues(this, measurements, captureTime, pid);
+				allProcesses.add(tempProc);
+			}
+			proc.waitFor();
+
+		}catch (IOException | InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
 }
