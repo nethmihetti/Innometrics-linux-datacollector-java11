@@ -1,7 +1,6 @@
 package App;
 
 import App.model.*;
-import javafx.application.Platform;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -50,9 +49,7 @@ public class SettingsPersister {
     private void commit() {
         if (this.p == null)
             return;
-
         try {
-            System.out.println("Saving Json at : "+this.p.toString());
             Writer writer = new FileWriter(this.p.toString());
             this.cache.writeJSONString(writer);
             writer.close();
@@ -83,12 +80,6 @@ public class SettingsPersister {
         System.out.println("saving : " + this.cache.toJSONString());
         this.commit();
     }
-    public void setSendcollectIntvl(int send, int collect){
-        this.cache.put("sendInterval",send);
-        this.cache.put("collectInterval",collect);
-        this.commit();
-    }
-
     public void cleanup() throws IOException {
         try {
             JSONObject json = new JSONObject();
@@ -99,7 +90,6 @@ public class SettingsPersister {
             ex.printStackTrace();
         }
     }
-
     public JSONObject getAllSettingsJson(){
         return this.cache;
     }

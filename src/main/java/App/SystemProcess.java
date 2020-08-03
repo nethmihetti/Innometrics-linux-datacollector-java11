@@ -1,12 +1,11 @@
 package App;
 
 import App.model.Model;
-import org.json.JSONArray;
+import org.json.simple.JSONArray;
 import org.json.JSONException;
 import org.json.simple.JSONObject;
 
-import java.util.HashMap;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 
 public class SystemProcess {
@@ -30,7 +29,16 @@ public class SystemProcess {
         result.put("ip_address",this.ip_address);
         result.put("mac_address",this.mac_address);
 
-        result.put("measurementReportList", measurementReportList);
+        //result.put("measurementReportList", measurementReportList);
+        for(int i=0; i<this.measurementReportList.size(); i++){
+            JSONObject tempObj = (JSONObject) this.measurementReportList.get(i);
+            Iterator<String> keys = tempObj.keySet().iterator();
+            while(keys.hasNext()){
+                String key = keys.next();
+                result.put(key, tempObj.getOrDefault(key,"none"));
+
+            }
+        }
 
         result.put("osversion",this.osversion);
         result.put("pid",this.pid);
@@ -55,12 +63,12 @@ public class SystemProcess {
             JSONObject value = entry.getValue();
 
             JSONObject tempObj = new JSONObject();
-            tempObj.put("alternativeLabel",key);
-            tempObj.put("capturedDate",value.getOrDefault("capturedDate","None"));
-            tempObj.put("measurementTypeId",value.getOrDefault("measurementTypeId","None"));
-            tempObj.put("value",value.getOrDefault("value","0.0"));
+            tempObj.put("alternativeLabel"+key,key);
+            tempObj.put("capturedDate"+key,this.collectedTime);
+            tempObj.put("measurementTypeId"+key,value.getOrDefault("measurementTypeId","None"));
+            tempObj.put("value"+key,value.getOrDefault("value","0.0"));
 
-            measurementReportList.put(tempObj);
+            this.measurementReportList.add(tempObj);
         }
     }
 
