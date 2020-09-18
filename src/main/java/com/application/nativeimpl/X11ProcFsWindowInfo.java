@@ -1,15 +1,13 @@
-package App.nativeimpl;
+package com.application.nativeimpl;
 
-import App.Activity;
-import App.SystemProcess;
+import com.application.data.Activity;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.platform.unix.X11;
-import App.model.Model;
+import com.application.model.Model;
 import javafx.application.Platform;
-import jnacontrib.x11.api.X;
-import jnacontrib.x11.api.X.X11Exception;
-import org.json.JSONException;
+import com.application.jnacontrib.x11.api.X;
+import com.application.jnacontrib.x11.api.X.X11Exception;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -18,7 +16,6 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -58,7 +55,7 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 		}
 	}
 
-	public void getActivity(String pid, String title, String process, final Model m){
+	public void getActivity(String pid, String title, String process, Model m){
 		try{
 			String[] args = new String[] {"/bin/bash", "-c", "ps -o user= -o %mem= -o %cpu= -o stat= -o command= -p "+pid };
 			Process proc = new ProcessBuilder(args).start();
@@ -70,10 +67,12 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 				String[] a = line.split("\\s+");
 				Clock clock = Clock.systemDefaultZone();
 				ZonedDateTime t = clock.instant().atZone(ZoneId.systemDefault());
+				String start_time = t.toLocalDateTime().toString();
+
 				HashMap hashMap = new HashMap();
-				hashMap.put("start_time",t.toLocalDateTime().toString());
+				hashMap.put("start_time",start_time);
 				hashMap.put("activityType",a[0]);
-				hashMap.put("idle_activity",a[3]);
+				hashMap.put("idle_activity",a[3].trim().split("")[0]);
 				hashMap.put("executable_name",process);
 				hashMap.put("browser_title",title);
 				hashMap.put("pid",pid);
@@ -84,8 +83,7 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 			}
 			proc.waitFor();
 
-		}catch (IOException | InterruptedException e) {
-			e.printStackTrace();
+		}catch (IOException | InterruptedException ignore) {
 		}
 	}
 
@@ -105,10 +103,15 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 				runTask(m);
 			}
 		};
-		Thread backgroundThread = new Thread(task);
-		backgroundThread.setDaemon(true);
-		backgroundThread.start();
+		// Run the task in a background thread
+		Thread ActivitiesListenThread = new Thread(task);
+		// Terminate the running thread if the application exits
+		ActivitiesListenThread.setDaemon(true);
+		// Start the thread
+		ActivitiesListenThread.start();
+		m.threadsContainer.put("ActivitiesListen",ActivitiesListenThread);
 	}
+
 	public void runTask(Model m){
 		display = new X.Display();
 		final AtomicBoolean stop = new AtomicBoolean(false);
@@ -116,26 +119,25 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 		X11.XEvent event = new X11.XEvent();
 		display.getRootWindow().selectInput(X11.PropertyChangeMask);
 		//TODO: http://www.linuxquestions.org/questions/showthread.php?p=2431345#post2431345
-		try {
-			int currentProcess = 0;
-			while (!stop.get()) {
+		int currentProcess = 0;
+		while (!stop.get()) {
+			try{
 				display.getRootWindow().nextEvent(event);
-				//handle the union type
 				event.setType(X11.XPropertyEvent.class);
 				event.read();
 				switch (event.type) {
 					case X11.PropertyNotify:
 						if (X11.INSTANCE.XGetAtomName(display.getX11Display(), event.xproperty.atom).equals("_NET_ACTIVE_WINDOW") && display.getActiveWindow().getID() != 0) {
-							int nowProcess = display.getActiveWindow().getPID().intValue();
-							if (nowProcess != currentProcess ) {
+							int nowProcess = display.getActiveWindow().getPID();
+							if (nowProcess != currentProcess) {
 								currentProcess = nowProcess;
 								final String title = getActiveWindowTitle();
 								final String process = getActiveWindowApplication();
 								Platform.runLater(new Runnable() {
 									@Override
 									public void run() {
-										getActivity(String.valueOf(nowProcess),title,process,m);
-										System.out.println("TITLE: " + title);
+										getActivity(String.valueOf(nowProcess), title, process, m);
+										//System.out.println("TITLE: " + title);
 										m.setWindowName(process);
 									}
 								});
@@ -144,9 +146,8 @@ public class X11ProcFsWindowInfo extends ActiveWindowInfo {
 						}
 						break;
 				}
+			} catch(X11Exception | NullPointerException ignore){
 			}
-		} catch (X11Exception | JSONException e) {
-			throw new RuntimeException(e);
 		}
 	}
 }

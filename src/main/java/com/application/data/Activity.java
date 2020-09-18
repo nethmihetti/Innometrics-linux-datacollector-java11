@@ -1,11 +1,9 @@
-package App;
-import App.model.Model;
-import javafx.application.Platform;
+package com.application.data;
+import com.application.model.Model;
 import org.json.JSONException;
 import org.json.simple.JSONObject;
 
 import java.util.HashMap;
-import java.util.Timer;
 
 public class Activity {
     private int activityID = -1;
@@ -53,10 +51,9 @@ public class Activity {
         this.executable_name = values.getOrDefault("executable_name","none");
         this.activityType = values.getOrDefault("activityType","none");
         this.start_time = values.getOrDefault("start_time","00:00:00");
-        //this.idle_activity = values.getOrDefault("idle_activity","Ss");
-        this.idle_activity = "false";
+        String procStateCode = values.getOrDefault("idle_activity","Ss");
+        this.idle_activity = isIdle(procStateCode);
     }
-    public void setEndTime(String time){
-        this.end_time = time;
-    }
+    public void setEndTime(String time){ this.end_time = time;}
+    private String isIdle(String code){ return Model.IdleStates.contains(code) ? "true":"false"; }
 }

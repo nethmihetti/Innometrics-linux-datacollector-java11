@@ -1,56 +1,77 @@
 plugins {
     id 'java'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.8'
+    id 'org.openjfx.javafxplugin' version '0.0.7'
+    id 'org.beryx.jlink' version '2.22.0'
 }
 
-group 'org.inno'
-version '1.0-SNAPSHOT'
-
+group 'org.innopolisU'
 sourceCompatibility = 11
+mainClassName = 'com.application.AppLauncher'
+project.description = 'Simple application for collecting data in linux'
+project.ext.buildDate = new Date()
+project.version = '3.0.1'
+def launcherName = 'DataCollectorLinux'
 
 repositories {
     mavenCentral()
 }
 
-sourceSets {
-    main {
-        java {
-            srcDir 'src'
-        }
-    }
-
-    test {
-        java {
-            srcDir 'tests'
-        }
-        resources {
-            srcDir 'resources'
-        }
-    }
-}
-
 dependencies {
-    implementation 'junit:junit:4.12'
     implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
     implementation group: 'org.json', name: 'json', version: '20090211'
-    implementation group: 'com.1stleg', name: 'jnativehook', version: 'LATEST'
-    implementation 'com.1stleg:jnativehook:2.1.0'
+
     implementation "net.java.dev.jna:jna:5.5.0"
     implementation "net.java.dev.jna:jna-platform:5.5.0"
-    implementation 'org.xerial:sqlite-jdbc:3.30.1'
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    testCompile 'org.junit.jupiter:junit-jupiter-api:5.5.1'
-    testCompile "org.testfx:testfx-junit5:4.0.16-alpha"
+    implementation 'org.xerial:sqlite-jdbc:3.31.1'
 }
 
 javafx{
-    modules = ['javafx.controls', 'javafx.fxml']
-    version = '14'
+    modules = ['javafx.controls', 'javafx.swing', 'javafx.fxml', 'javafx.media']
+    version = '12'
 }
 
-test {
-    exclude '**/blackBox.class'
+task copyLicense {
+    outputs.file new File("$buildDir/LICENSE")
+    doLast {
+        copy {
+            from "LICENSE"
+            into "$buildDir"
+        }
+    }
 }
 
-mainClassName = 'App.Main'
+jar {
+    manifest {
+        attributes('Main-Class': "$mainClassName")
+    }
+}
+
+jlink {
+    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    targetPlatform('linux', '/usr/lib/jvm/adoptopenjdk-11-hotspot-amd64')
+    launcher {
+        name = "${launcherName}"
+    }
+    addExtraDependencies("javafx")
+    jpackage {
+        jpackageHome = '/usr/lib/jvm/java-14-openjdk-amd64'
+        skipInstaller = false
+        installerType = 'deb'
+        targetPlatformName = 'linux'
+        imageOptions = ['--icon', 'src/main/resources/metrics-collector.png']
+        installerOptions = ['--resource-dir', "build/jpackage/DataCollectorLinux/lib",
+                            '--description', project.description,
+                            '--vendor', 'Innopolis University',
+                            '--app-version', project.version,
+                            '--linux-shortcut',
+                            '--linux-deb-maintainer', 'innometrics@innopolis.ru']
+    }
+}
+
+tasks.jpackageImage.doLast {
+    copy {
+        from "src/main/resources"
+        into "build/jpackage/${launcherName}/lib/app"
+    }
+}

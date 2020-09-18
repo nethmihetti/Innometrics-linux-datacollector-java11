@@ -1,6 +1,7 @@
-package App;
+package com.application.UI;
 
-import App.model.Model;
+import com.application.AppLauncher;
+import com.application.model.Model;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -21,13 +22,16 @@ import static javafx.scene.text.TextAlignment.CENTER;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Enumeration;
-import java.util.Locale;
 import java.util.Optional;
+import java.util.Properties;
 
 public class MainPage {
     public MainPage(){}
@@ -45,7 +49,7 @@ public class MainPage {
     }
     public static String getLocalMac() throws SocketException {
         //Get MAC-address
-        String macAdrs = "";
+        String macAdrs = "00-00-00-00-00";
         Enumeration<NetworkInterface> networks = NetworkInterface.getNetworkInterfaces();
         NetworkInterface inter;
         while (networks.hasMoreElements()) {
@@ -67,12 +71,27 @@ public class MainPage {
         try {
             String content = Files.readString(Paths.get("/etc/issue.net"));
             return content;
-
         } catch (IOException e) {
             //e.printStackTrace();
             return "Linux";
         }
     }
+    public static String geCurrCollectorVersion(){
+
+        Properties prop = new Properties();
+        String fileName = "/opt/datacollectorlinux/lib/app/DataCollectorLinux.cfg";
+        InputStream is = null;
+        try {
+            is = new FileInputStream(fileName);
+        } catch (FileNotFoundException ex) {
+        }
+        try {
+            prop.load(is);
+        } catch (IOException ex) {
+        }
+        return prop.getProperty("app.version");
+    }
+
 
     private GridPane getMainTab(Model m) throws SocketException {
         //Main Tab contents
@@ -81,7 +100,6 @@ public class MainPage {
         mainGrid.setHgap(10);
         mainGrid.setVgap(10);
         mainGrid.setPadding(new Insets(30, 15, 5, 15));
-        //mainGrid.setGridLinesVisible(true);
 
         Text currentSess = new Text("Current session");
         currentSess.setFont(Font.font(currentSess.getFont().toString(), FontWeight.BOLD, 15));
@@ -99,7 +117,6 @@ public class MainPage {
         Label HostIpAdrsVal = new Label(this.getLocalIP());
         Label UserNameVal = new Label(m.getUsername());
         Label HostMacAdrsVal = new Label(this.getLocalMac());
-
 
         VBox vBox1 = new VBox(10);
         vBox1.setAlignment(Pos.CENTER_LEFT);
@@ -124,31 +141,23 @@ public class MainPage {
         activeappTitleBox.getChildren().add(activeapp);
         mainGrid.add(activeappTitleBox, 0, 3, 2, 1);
 
-        //focused window icon
-        /*javafx.scene.image.Image activeAppIcon = new javafx.scene.image.Image(this.getClass().getResource("/metrics-collector.png").toExternalForm());
-        HBox activeAppBox = new HBox(10);
-        activeAppBox.setAlignment(Pos.BOTTOM_CENTER);
-        activeAppBox.getChildren().add(new ImageView(activeAppIcon));
-        mainGrid.add(activeAppBox, 0, 4,1,1);*/
-
         //focused window process name
         TextFlow flow = new TextFlow();
         flow.setTextAlignment(CENTER);
         Label windowName = m.getWindowName();
-        //Text focusTime = new Text("00:00:05"); //TODO: Create a timer for each focused window
         flow.getChildren().add(windowName);
 
         VBox focusedVBox = new VBox(10);
         focusedVBox.setAlignment(Pos.CENTER);
         focusedVBox.getChildren().add(flow);
-        //focusedVBox.getChildren().add(focusTime);
-        mainGrid.add(focusedVBox,0,4,2,1); //add to main grid
+        mainGrid.add(focusedVBox,0,4,2,1);
 
         Button stopCloseButton = new Button();
         stopCloseButton.setStyle("-fx-background-color: #399cbd; -fx-text-fill: white");
         stopCloseButton.setText("Stop and Quit");
         stopCloseButton.setFont(Font.font("Verdana",FontWeight.BOLD,15));
         stopCloseButton.setPadding(new Insets(10));
+        stopCloseButton.setId("stopCloseButton");
 
         stopCloseButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -166,7 +175,6 @@ public class MainPage {
                 if (result.get() == buttonYes){
                     m.shutdown();
                 }
-
             }
         });
 
@@ -176,6 +184,7 @@ public class MainPage {
         stopCloseHbox.getChildren().add(stopCloseButton);
 
         mainGrid.add(stopCloseHbox,0,5,2,1);
+        mainGrid.setId("mainTabGrid");
 
         return mainGrid;
     }
@@ -197,11 +206,9 @@ public class MainPage {
 
         VBox aboutVbox = new VBox(10);
         aboutVbox.setAlignment(Pos.CENTER);
-        final Label collectorVersion = new Label("Version : 1.0.1");
-        collectorVersion.setMaxWidth(Double.MAX_VALUE);
-        collectorVersion.setAlignment(Pos.CENTER);
+        final Label collectorVersion = new Label("Version "+geCurrCollectorVersion());
         collectorVersion.setTextAlignment(CENTER);
-        collectorVersion.setFont(Font.font(collectorVersion.getFont().toString(), FontWeight.NORMAL, 15));
+        collectorVersion.setFont(Font.font(collectorVersion.getFont().toString(), FontWeight.LIGHT, 15));
         aboutVbox.getChildren().add(collectorVersion);
 
         //User account
@@ -209,9 +216,10 @@ public class MainPage {
         usern.setFont(Font.font( usern.getFont().toString(),FontWeight.BOLD,15 ));
         usern.setTextAlignment(CENTER);
         final Label LoginUsername = new Label(m.getLoginUsername());
-        LoginUsername.setMaxWidth(300);
+        LoginUsername.setFont(Font.font( LoginUsername.getFont().toString(),FontWeight.LIGHT,15 ));
         LoginUsername.setTextAlignment(CENTER);
         LoginUsername.setWrapText(true);
+        aboutVbox.setFillWidth(true);
         aboutVbox.getChildren().add(usern);
         aboutVbox.getChildren().add(LoginUsername);
         aboutGrid.add(aboutVbox,0,1);
@@ -219,12 +227,16 @@ public class MainPage {
         // add logout and update check
         HBox hboxLogInUpdate = new HBox(15);
         hboxLogInUpdate.setAlignment(Pos.BOTTOM_CENTER);
-        //Button updateBtn = new Button("Update");
-        //updateBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
         Button logOutBtn = new Button("Logout");
         logOutBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
+        logOutBtn.setId("logOutButton");
+
+        Button updateBtn = new Button("Check for updates");
+        updateBtn.setFont(Font.font("Verdana", FontWeight.BOLD, 15));
+        updateBtn.setId("updateButton");
+
         hboxLogInUpdate.setPadding(new Insets(20,0,5,0));
-        hboxLogInUpdate.getChildren().addAll(logOutBtn);
+        hboxLogInUpdate.getChildren().addAll(logOutBtn,updateBtn);
         aboutGrid.add(hboxLogInUpdate,0,2);
 
         logOutBtn.setOnAction(new EventHandler<ActionEvent>() {
@@ -239,15 +251,39 @@ public class MainPage {
                 if (result.get() == ButtonType.OK){
                     try {
                         m.endWatching(true);
-                        m.flipToLoginPage((Stage) logOutBtn.getScene().getWindow());
+                        m.shutdown();
+                        //m.flipToLoginPage((Stage) logOutBtn.getScene().getWindow());
                     } catch (IOException ioException) {
                         ioException.printStackTrace();
                     }
-
                 }
             }
         });
 
+
+        updateBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e){
+                updateBtn.setDisable(true);
+                boolean updatesAvailable = m.checkUpdates();
+                if (updatesAvailable){
+                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                    alert.setTitle("Update downloads");
+                    alert.setHeaderText("Update is available!");
+                    alert.setContentText("This action will download & install updates. \nDo you want to install the updates?");
+
+                    ButtonType buttonInstall = new ButtonType("Install");
+                    ButtonType buttonCancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+                    alert.getButtonTypes().setAll(buttonInstall,buttonCancel);
+                    Optional<ButtonType> result = alert.showAndWait();
+                    if (result.get() == buttonInstall){
+                        m.shutdown();
+                    }else { updateBtn.setDisable(false); }
+                }
+            }
+        });
+        aboutGrid.setId("aboutGrid");
         return aboutGrid;
     }
 
@@ -256,10 +292,12 @@ public class MainPage {
         TabPane tabPane = new TabPane();
 
         Tab tab1 = new Tab("Main");
+        tab1.setId("MainTab");
         GridPane mainGrid = this.getMainTab(m);
         tab1.setContent(mainGrid);
 
         Tab tab3 = new Tab("About");
+        tab3.setId("AboutTab");
         GridPane aboutGrid = this.getAboutTab(m);
         tab3.setContent(aboutGrid);
 
@@ -276,9 +314,7 @@ public class MainPage {
 
         VBox vBox = new VBox(tabPane);
         vBox.setAlignment(Pos.TOP_CENTER);
-        Scene mainScene = new Scene(vBox,360, 350);
 
-        return mainScene;
-
+        return new Scene(vBox,360, 350);
     }
 }

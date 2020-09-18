@@ -21,7 +21,7 @@
  * A copy is also included in the downloadable source code package
  * containing JNA, in file "AL2.0".
  */
-package jnacontrib.x11.api;
+package com.application.jnacontrib.x11.api;
 
 import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
@@ -142,8 +142,8 @@ public class X {
          * @param name name of the atom
          * @return atom
          */
-        public X11.Atom getAtom(String name) {
-            X11.Atom atom = atomsHash.get(name);
+        public Atom getAtom(String name) {
+            Atom atom = atomsHash.get(name);
             if (atom == null) {
                 atom = x11.XInternAtom(x11Display, name, false);
                 atomsHash.put(name, atom);
@@ -413,7 +413,7 @@ public class X {
      * contain the keycodes as Byte objects. You can directly access these lists to
      * read, replace, remove or insert new keycodes to these modifiers.
      * To apply a new modifier keymap call
-     * {@link X.Display#setModifierKeymap(ModifierKeymap)}.
+     * {@link Display#setModifierKeymap(ModifierKeymap)}.
      */
     public static class ModifierKeymap {
         /** Shift modifier as an ArrayList&lt;Byte&gt;. */
@@ -519,7 +519,7 @@ public class X {
      * X Desktop.
      */
     public static class Desktop {
-        public X.Display display;
+        public Display display;
         public int number;
         public String name;
 
@@ -535,7 +535,7 @@ public class X {
      * X Window.
      */
     public static class Window {
-        private X.Display display;
+        private Display display;
         private X11.Window x11Window;
 
         /**
@@ -562,7 +562,7 @@ public class X {
          * @param display   display where the window is allocated
          * @param x11Window X11 window
          */
-        public Window(X.Display display, X11.Window x11Window) {
+        public Window(Display display, X11.Window x11Window) {
             this.display = display;
             this.x11Window = x11Window;
         }
@@ -644,7 +644,7 @@ public class X {
          * @return geometry of the window
          */
         public Geometry getGeometry() {
-            X11.WindowByReference junkRoot = new X11.WindowByReference();
+            WindowByReference junkRoot = new WindowByReference();
             IntByReference junkX = new IntByReference();
             IntByReference junkY = new IntByReference();
             IntByReference x = new IntByReference();
@@ -669,7 +669,7 @@ public class X {
          * @return bounding box of the window
          */
         public Rectangle getBounds() {
-            X11.WindowByReference junkRoot = new X11.WindowByReference();
+            WindowByReference junkRoot = new WindowByReference();
             IntByReference junkX = new IntByReference();
             IntByReference junkY = new IntByReference();
             IntByReference x = new IntByReference();
@@ -746,7 +746,7 @@ public class X {
          * @return property value as integer or null if not found
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public Integer getIntProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public Integer getIntProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             byte[] property = getProperty(xa_prop_type, xa_prop_name);
             if( property == null ){
                 return null;
@@ -762,7 +762,7 @@ public class X {
          * @return property value as integer
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public Integer getIntProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public Integer getIntProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return getIntProperty(xa_prop_type, display.getAtom(xa_prop_name));
         }
 
@@ -774,7 +774,7 @@ public class X {
          * @return property value as window, or null if not found
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public Window getWindowProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public Window getWindowProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             Integer windowId = getIntProperty(xa_prop_type, xa_prop_name);
             if( windowId == null ){
                 return null;
@@ -791,7 +791,7 @@ public class X {
          * @return property value as window
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public Window getWindowProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public Window getWindowProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return getWindowProperty(xa_prop_type, display.getAtom(xa_prop_name));
         }
 
@@ -803,7 +803,7 @@ public class X {
          * @return property value as a null terminated byte array, or null if not found
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public byte[] getNullTerminatedProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public byte[] getNullTerminatedProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             byte[] bytesOrig = getProperty(xa_prop_type, xa_prop_name);
             byte[] bytesDest;
 
@@ -834,7 +834,7 @@ public class X {
          * @return property value as a null terminated byte array
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public byte[] getNullTerminatedProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public byte[] getNullTerminatedProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return getNullTerminatedProperty(xa_prop_type, display.getAtom(xa_prop_name));
         }
 
@@ -846,7 +846,7 @@ public class X {
          * @return property value as byte array where every '\0' character is replaced by '.'.  null if the property was not found
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public byte[] getNullReplacedStringProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public byte[] getNullReplacedStringProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             byte[] bytes = getProperty(xa_prop_type, xa_prop_name);
 
             if( bytes == null ){
@@ -872,7 +872,7 @@ public class X {
          * @return property value as byte array where every '\0' character is replaced by '.'
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public byte[] getNullReplacedStringProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public byte[] getNullReplacedStringProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return getNullReplacedStringProperty(xa_prop_type, display.getAtom(xa_prop_name));
         }
 
@@ -884,7 +884,7 @@ public class X {
          * @return property value as string where every '\0' character is replaced by '.'
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String getStringProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public String getStringProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             return new String(getNullReplacedStringProperty(xa_prop_type, xa_prop_name));
         }
 
@@ -896,7 +896,7 @@ public class X {
          * @return property value as string where every '\0' character is replaced by '.'
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String getStringProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public String getStringProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return new String(getNullReplacedStringProperty(xa_prop_type, xa_prop_name));
         }
 
@@ -908,7 +908,7 @@ public class X {
          * @return property value as string list
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String[] getStringListProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public String[] getStringListProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             return new String(getProperty(xa_prop_type, xa_prop_name)).split("\0");
         }
 
@@ -920,7 +920,7 @@ public class X {
          * @return property value as string list, or null if the property value does not exist
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String[] getStringListProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public String[] getStringListProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             byte[] property = getProperty(xa_prop_type, xa_prop_name);
             if( property == null ){
                 return null;
@@ -936,7 +936,7 @@ public class X {
          * @return property value as UTF8 string where every '\0' character is replaced by '.'
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String getUtf8Property(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public String getUtf8Property(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             try {
                 byte[] property = getNullReplacedStringProperty(xa_prop_type, xa_prop_name);
                 if( property == null ){
@@ -956,7 +956,7 @@ public class X {
          * @return property value as UTF8 string where every '\0' character is replaced by '.'
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String getUtf8Property(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public String getUtf8Property(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return getUtf8Property(xa_prop_type, display.getAtom(xa_prop_name));
         }
 
@@ -968,7 +968,7 @@ public class X {
          * @return property value as UTF8 string list
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String[] getUtf8ListProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public String[] getUtf8ListProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             try {
                 return new String(getProperty(xa_prop_type, xa_prop_name), "UTF8").split("\0");
             } catch (UnsupportedEncodingException e) {
@@ -984,7 +984,7 @@ public class X {
          * @return property value as UTF8 string list
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public String[] getUtf8ListProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public String[] getUtf8ListProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return getUtf8ListProperty(xa_prop_type, display.getAtom(xa_prop_name));
         }
 
@@ -996,7 +996,7 @@ public class X {
          * @return property value as a byte array
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public byte[] getProperty(X11.Atom xa_prop_type, X11.Atom xa_prop_name) throws X11Exception {
+        public byte[] getProperty(Atom xa_prop_type, Atom xa_prop_name) throws X11Exception {
             X11.AtomByReference xa_ret_type_ref = new X11.AtomByReference();
             IntByReference ret_format_ref = new IntByReference();
             NativeLongByReference ret_nitems_ref = new NativeLongByReference();
@@ -1018,7 +1018,7 @@ public class X {
                 throw new X11Exception("Cannot get " + prop_name + " property.");
             }
 
-            X11.Atom xa_ret_type = xa_ret_type_ref.getValue();
+            Atom xa_ret_type = xa_ret_type_ref.getValue();
             Pointer ret_prop = ret_prop_ref.getValue();
 
             if (xa_ret_type == null) {
@@ -1074,7 +1074,7 @@ public class X {
          * @return property value as a byte array
          * @throws X11Exception thrown if X11 window errors occurred
          */
-        public byte[] getProperty(X11.Atom xa_prop_type, String xa_prop_name) throws X11Exception {
+        public byte[] getProperty(Atom xa_prop_type, String xa_prop_name) throws X11Exception {
             return getProperty(xa_prop_type, display.getAtom(xa_prop_name));
         }
 

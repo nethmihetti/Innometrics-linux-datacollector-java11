@@ -1,17 +1,17 @@
-package App;
+package com.application.UI;
 
-import App.model.Model;
+import com.application.model.Model;
+import com.application.utils.DialogsAndAlert;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
@@ -27,8 +27,8 @@ import java.net.http.HttpResponse;
 public class LoginPage {
     public LoginPage(){}
 
-    //private static final String uri = "https://innometric.guru:9091/login"; //production server
-    private static final String uri = "http://10.90.138.244:9091/login"; //dev server
+    private static final String uri = "https://innometric.guru:9091/login"; //production server
+    //private static final String uri = "http://10.90.138.244:9091/login"; //dev server
     public static String token = "";
 
     private static String login(String username, String password) throws JSONException {
@@ -37,8 +37,6 @@ public class LoginPage {
         jsonBody.put("email", username);
         jsonBody.put("password", password);
         jsonBody.put("projectID", projectID);
-
-        System.out.println(jsonBody.toString());
 
         HttpClient client = HttpClient.newBuilder().build();
         HttpRequest request = HttpRequest.newBuilder()
@@ -50,18 +48,12 @@ public class LoginPage {
 
         try {
             HttpResponse<?> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if(response.statusCode() == 200 || response.statusCode() == 500) {
+            if(response.statusCode() == 200) {
                 JSONObject responseBody = new JSONObject(response.body().toString());
                 token = responseBody.get("token").toString();
-                System.out.println(token);
-            } else {
-                System.out.println(response.statusCode());
-                throw new SecurityException(Integer.toString(response.statusCode()));
             }
         } catch (Exception ex) {
-            System.out.println("GOT AN EXCEPTION!!");
-            //throw new RuntimeException(ex);
+            DialogsAndAlert.errorToDevTeam(ex,"Auth request");
         }
         return token;
     }
@@ -72,6 +64,7 @@ public class LoginPage {
         loginGrid.setHgap(10);
         loginGrid.setVgap(10);
         loginGrid.setPadding(new Insets(5, 10, 5, 10));
+        loginGrid.setId("loginPage");
 
         //Set login scene title
         final Label scenetitle = new Label("Login to Data Collector");
@@ -83,12 +76,35 @@ public class LoginPage {
 
         //Adding Nodes to loin GridPane layout
         Label userName = new Label("Login");
-        //final TextField txtUserName = new TextField("g.dlamini@innopolis.university");
-        final TextField txtUserName = new TextField("test@gmail.com");
-        Label lblPassword = new Label("Password");
+        final TextField txtUserName = new TextField("g.dlamini@innopolis.university");
+        //final TextField txtUserName = new TextField("test@gmail.com");
+        txtUserName.setId("userNameInput");
+
+        //password field
+        // text field to show password as unmasked
+        final TextField passTextField = new TextField();
+        passTextField.setManaged(false);
+        passTextField.setVisible(false);
+
+        // Actual password field
         final PasswordField passwordField = new PasswordField();
-        //passwordField.setText("InnoMetrics$2020");
-        passwordField.setText("testpass");
+        passwordField.setText("InnoMetrics$2020");
+        //passwordField.setText("testpass");
+        passwordField.setId("passwordField");
+
+        CheckBox checkBox = new CheckBox("Show/Hide password");
+        passTextField.managedProperty().bind(checkBox.selectedProperty());
+        passTextField.visibleProperty().bind(checkBox.selectedProperty());
+
+        passwordField.managedProperty().bind(checkBox.selectedProperty().not());
+        passwordField.visibleProperty().bind(checkBox.selectedProperty().not());
+
+        // Bind the textField and passwordField text values bidirectionally.
+        passTextField.textProperty().bindBidirectional(passwordField.textProperty());
+
+        VBox passwordFieldvbox = new VBox(10);
+        passwordFieldvbox.getChildren().addAll(passwordField, passTextField);
+        Label lblPassword = new Label("Password");
 
         //Login Button
         Button btnLogin = new Button("Login");
@@ -100,20 +116,24 @@ public class LoginPage {
 
         //Optional auth status
         final Label lblMessage = new Label();
+        lblMessage.setMaxWidth(Double.MAX_VALUE);
+        lblMessage.setAlignment(Pos.CENTER);
+        lblMessage.setTextFill(Color.FIREBRICK);
 
         // Adding nodes to Login grid
         loginGrid.add(userName, 0, 1);
         loginGrid.add(txtUserName, 1, 1);
         loginGrid.add(lblPassword, 0, 2);
-        loginGrid.add(passwordField, 1, 2);
-        loginGrid.add(hbBtn, 1, 3);
-        loginGrid.add(lblMessage, 1, 4);
+        loginGrid.add(passwordFieldvbox, 1, 2);
+        loginGrid.add(checkBox, 1, 3);
+        loginGrid.add(hbBtn, 1, 4);
+        loginGrid.add(lblMessage, 1, 5);
 
+        btnLogin.setId("loginButton");
         btnLogin.setOnAction(new EventHandler<ActionEvent>() {
             private void loggedIn() throws JSONException {
                 m.saveUsername(txtUserName);
                 btnLogin.setDisable(true);
-                //displayMainPage.run();
             }
             @Override
             public void handle(ActionEvent e) {
@@ -125,8 +145,15 @@ public class LoginPage {
 
                     if(!loginRes.equals("")) {
                         m.updateLoinSettings(loginRes,username,passwordField);
+                        lblMessage.setTextFill(Color.GREEN);
                         lblMessage.setText("Login Success");
+
+                        //DialogsAndAlert.collectSysProperties();
                         loggedIn();
+                        window.setOnCloseRequest((event) -> {
+                            event.consume();
+                            window.setIconified(true); });
+
                         m.flipToMainPage(window);
 
                     } else {
@@ -139,10 +166,7 @@ public class LoginPage {
                 }
             }
         });
-
-        Scene LoginScene = new Scene(loginGrid, 360, 350);
-
-        return LoginScene;
+        return new Scene(loginGrid, 360, 350);
     }
 
 }

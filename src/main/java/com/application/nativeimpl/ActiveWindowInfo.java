@@ -1,7 +1,7 @@
-package App.nativeimpl;
+package com.application.nativeimpl;
 
 import com.sun.jna.Platform;
-import App.model.Model;
+import com.application.model.Model;
 
 import java.io.File;
 
@@ -12,8 +12,8 @@ public abstract class ActiveWindowInfo {
 		//TODO: OS X: proc_pidpath() from libproc.h (http://stackoverflow.com/a/8149380)
 		//TODO: FreeBSD: sysctl CTL_KERN (http://stackoverflow.com/q/799679)
 		if (Platform.isWindows())
-			System.out.println("We have windows OS here!!");
-			//INSTANCE = new Win32WindowInfo();
+			//System.out.println("We have windows OS here!!");
+			INSTANCE = null;//new Win32WindowInfo();
 		else
 			INSTANCE = new X11ProcFsWindowInfo();
 	}

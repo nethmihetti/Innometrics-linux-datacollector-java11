@@ -1,7 +1,12 @@
-package App.model;
+package com.application.model;
 
-import App.*;
-import App.nativeimpl.ActiveWindowInfo;
+import com.application.UI.LoginPage;
+import com.application.UI.MainPage;
+import com.application.collectorApi.DataCollectorAPI;
+import com.application.data.Activity;
+import com.application.data.SystemProcess;
+import com.application.nativeimpl.ActiveWindowInfo;
+import com.application.utils.DialogsAndAlert;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.geometry.Pos;
@@ -9,38 +14,35 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
-import org.jnativehook.GlobalScreen;
 import org.json.JSONException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-
-import java.awt.*;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.SocketException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
 
 public class Model {
 
 	private final SettingsPersister settings;
-	private TrayIcon trayIcon;
+	public boolean tokenValid;
 	public volatile Label windowName = new Label("Application");
 	private String loginUsername, username;
 	private PasswordField loginPassword;
@@ -51,14 +53,19 @@ public class Model {
 	private PreparedStatement insetStmt, ProcsinsetStmt = null;
 	Queue <Activity> activitiesQueue = new LinkedList<>();
 	Queue <SystemProcess> processesQueue = new LinkedList<>();
+	public static final List<String> IdleStates = Arrays.asList("D","S","T","X","t","Z");
+	public HashMap<String, Thread> threadsContainer = new HashMap<>();
+	private final DataCollectorAPI API;
 
 	//constructor
-	public Model(String settingsFile) {
+	public Model(Path settingsFile) {
 		settings = new SettingsPersister(settingsFile);
+		tokenValid = tokenIsValid(settings.get("tokenDate"));
 		this.windowName.setPrefWidth(200);
 		this.windowName.setWrapText(true);
 		this.windowName.setAlignment(Pos.CENTER);
 		this.loginUsername = "";
+		this.API = new DataCollectorAPI(settings.get("token"));
 		initDatabase();
 	}
 
@@ -73,57 +80,59 @@ public class Model {
 	 * Start all the background threads (active window listener and data saving to local db and data post to remote server)
 	 */
 	public void beginWatching() {
-		assert Platform.isFxApplicationThread(); //make sure its the main thread
-		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.ALL);
 		ActiveWindowInfo.INSTANCE.startListening(this); //Active window capture thread
 		startPostActivitiesToDB(); //Post to local SQLlite local db thread
-		StartPostingActivities(); //Post activities to remote DB thread
 
 		startWatchingProcesses(); //capture ps thread
 		StartpostProcessesToDb(); //Post ps results to SQLlite DB (local) thread
-		//TODO: Post Processes to remote DB (idea : to post together with activities)
+
+		StartPostingData(); //Post activities and processes to remote DB thread
 	}
 	public void endWatching(boolean cleanup) throws IOException {
 		if (cleanup) {
 			settings.cleanup(); //Reset the settings (delete settings)
 		}
-		System.out.println("Stopping watch thread!!");
 	}
 	public void shutdown(){
-		System.out.println("Collector is shutting down!");
 		try{
+			for(Thread value : threadsContainer.values()){
+				value.interrupt();
+			}
+			addActivitiesToDb();
 			cleanDb();
 			this.conn.close();
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (Exception ex) {
+			DialogsAndAlert.errorToDevTeam(ex,"Shutdown Ex");
+		}finally {
+			Platform.exit();
 		}
-		Platform.exit();
 	}
 
 	public void flipToMainPage(Stage window) throws SocketException {
-		assert Platform.isFxApplicationThread();
 
 		MainPage mainPage = new MainPage();
-		this.currentIP = MainPage.getLocalIP();
-		this.currentMAC = MainPage.getLocalMac();
-		this.currentOS = MainPage.getLocalOSVersion();
+		Model.currentIP = MainPage.getLocalIP();
+		Model.currentMAC = MainPage.getLocalMac();
+		Model.currentOS = MainPage.getLocalOSVersion();
 
 		this.loginUsername = settings.get("username");
 		this.username = settings.get("loginUsername");
 
 		window.setTitle("InnoMetrics Data Collector");
 		window.setScene(mainPage.constructMainPage(this));
+		window.setOnCloseRequest((event) -> {
+			event.consume();
+			window.setIconified(true); });
 		beginWatching();
 	}
 	public void setLoginPageComponents(String loginUsername, PasswordField loginPassword) {
-		assert Platform.isFxApplicationThread();
 
 		this.loginUsername = loginUsername;
 		this.username = loginUsername.split("@")[0];
 		this.loginPassword = loginPassword;
 	}
 	public void flipToLoginPage(Stage window) throws IOException {
-		assert Platform.isFxApplicationThread();
+		//assert Platform.isFxApplicationThread();
 		endWatching(false);
 		LoginPage startPage = new LoginPage();
 		window.setScene(startPage.constructLoginPage(this,window));
@@ -137,10 +146,10 @@ public class Model {
 	}
 	public void saveUsername(final TextField UsernameField) {
 		String username = UsernameField.getText().trim();
-		if (username != null && !username.isEmpty())
-			System.out.println("Saving user name!! ");
-			settings.putSetting("username",username);
-			settings.putSetting("loginUsername",username.split("@")[0]);
+		if (!username.isEmpty())
+			//System.out.println("Saving user name!! ");
+		settings.putSetting("username",username);
+		settings.putSetting("loginUsername",username.split("@")[0]);
 	}
 
 	public String getLoginUsername() {
@@ -151,20 +160,17 @@ public class Model {
 	public void updateLoinSettings(String loginRes, String loginUsername, PasswordField loginPassword){
 		this.setLoginPageComponents(loginUsername,loginPassword);
 		this.setToken(loginRes);
+		API.setToken(this.token);
 		settings.updateSettings(this);
 	}
 	public JSONObject getUserSettingsJSON(){
 		return settings.getAllSettingsJson();
 	}
 
-	public void setTrayIcon(TrayIcon trayIcon) {
-		this.trayIcon = trayIcon;
-	} //todo: Implement trayIcon
-
 	public void setAddActivity(Activity currentActivity) {
 		this.currentActivity = currentActivity;
 	}
-	public void setActivityEndTime() throws JSONException {
+	public void setActivityEndTime() {
 		if (this.currentActivity != null){
 			Clock clock = Clock.systemDefaultZone();
 			ZonedDateTime t = clock.instant().atZone(ZoneId.systemDefault());
@@ -177,30 +183,30 @@ public class Model {
 	 * Initialize the local database buy connecting to local or creating a new instance if not already existing
 	 */
 	public void initDatabase() {
-		assert Platform.isFxApplicationThread();
-		String dbpath = "src/main/resources/userdb.db";
-		File f = new File(dbpath);
+		//File f = new File(this.getClass().getResource("/userdb.db").getPath());
+		//String dbpath = f.getPath();
+		Path dbpath = Paths.get("/opt/datacollectorlinux/lib/app/userdb.db");
 
-		if(f.exists() && !f.isDirectory()){
-			this.conn = ConnectToDB(dbpath);
+		if(Files.exists(dbpath)){
+			this.conn = ConnectToDB(dbpath.toString());
+			cleanDb();
 		}else{
-			System.out.println("No existing Database");
-			this.conn = ConnectToDB(dbpath);
+			this.conn = ConnectToDB(dbpath.toString());
 			createTable(conn);
 		}
 		try {
-			insetStmt = this.conn.prepareStatement("INSERT INTO Activities(activityType, browser_title, browser_url, end_time, executable_name, idle_activity, ip_address, mac_address, osversion," +
+			insetStmt = this.conn.prepareStatement("INSERT INTO activitiesTable(activityType, browser_title, browser_url, end_time, executable_name, idle_activity, ip_address, mac_address, osversion," +
 					" pid, start_time, userID, posted) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			ProcsinsetStmt = this.conn.prepareStatement("INSERT INTO processesReports(collectedTime, ip_address, mac_address, alternativeLabelCpu, capturedDateCpu, measurementTypeIdCpu, valueCpu, alternativeLabelMem, capturedDateMem, measurementTypeIdMem, valueMem, osversion," +
-					" pid, userID, posted) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+					" pid, processName, userID, posted) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		}
 		catch (SQLException ex){
-			ex.printStackTrace();
+			DialogsAndAlert.errorToDevTeam(ex,"Local database tables error");
 		}
 	}
 	private void createTable(Connection conn){
 		try{
-			String sql = "CREATE TABLE IF NOT EXISTS Activities (\n"
+			String sql = "CREATE TABLE IF NOT EXISTS activitiesTable (\n"
 					+ " activityID INTEGER PRIMARY KEY AUTOINCREMENT,\n"
 					+ " activityType text,\n"
 					+ " browser_title text,\n"
@@ -235,27 +241,26 @@ public class Model {
 					+ " valueMem text,\n"
 					+ " osversion text,\n"
 					+ " pid text,\n"
+					+ " processName text,\n"
 					+ " userID text,\n"
 					+ " posted INTEGER\n"
 					+ ");";
 
 			Statement createProcessTableStmt = conn.createStatement();
 			createProcessTableStmt.execute(processesTable);
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			DialogsAndAlert.errorToDevTeam(ex,"Local data storage create error");
 		}
 
 	}
 	private Connection ConnectToDB(String dbPath) {
-		//Registering the Driver
 		Connection conn = null;
 		try {
 			Class.forName("org.sqlite.JDBC");
+			//conn = DriverManager.getConnection("jdbc:sqlite::memory:");
 			conn = DriverManager.getConnection("jdbc:sqlite:"+dbPath);
-		} catch (ClassNotFoundException | SQLException eString) {
-			System.err.println("Could not init JDBC driver - driver not found");
+		} catch (ClassNotFoundException | SQLException ignored) {
 		}
-		System.out.println("Connection established......");
 		return conn;
 	}
 
@@ -283,10 +288,9 @@ public class Model {
 					insetStmt.setString(11, (String) activityJson.get("start_time"));
 					insetStmt.setString(12, (String) activityJson.get("userID"));
 					insetStmt.setInt(13, 0);
-					insetStmt.executeUpdate();
+					insetStmt.execute();
 
-				} catch (SQLException | JSONException ex) {
-					ex.printStackTrace();
+				} catch (SQLException | JSONException ignored) {
 				}
 			}
 		}
@@ -298,9 +302,9 @@ public class Model {
 				final AtomicBoolean stop = new AtomicBoolean(false);
 				while(!stop.get()){
 					try {
-						Thread.sleep(30000); //1 min
+						Thread.sleep(120000); //2 min
 					} catch (InterruptedException e) {
-						e.printStackTrace();
+						Thread.currentThread().interrupt();
 					}
 					addActivitiesToDb();
 				}
@@ -309,13 +313,14 @@ public class Model {
 		Thread backgroundThread = new Thread(task);
 		backgroundThread.setDaemon(true);
 		backgroundThread.start();
+		threadsContainer.put("PostActivitiesToDB",backgroundThread);
 	}
 
 	/**
 	 * This method periodically (thread running in background) a posts activities from local database to remote database
 	 */
-	public void StartPostingActivities(){
-		assert Platform.isFxApplicationThread();
+	public void StartPostingData(){
+		//assert Platform.isFxApplicationThread();
 		Runnable task = new Runnable() {
 			@Override
 			public void run() {
@@ -323,9 +328,12 @@ public class Model {
 				while(!stop.get()){
 					try {
 						sendData();
-						Thread.sleep(120000);
-					} catch (InterruptedException | JSONException e) {
-						e.printStackTrace();
+						Thread.sleep(300000); //5 min
+					} catch (InterruptedException e) {
+						Platform.runLater(() -> {
+							DialogsAndAlert.Infomation("Posting data fail");
+						});
+						//e.printStackTrace();
 					}
 				}
 			}
@@ -337,21 +345,26 @@ public class Model {
 
 	/**
 	 * read data from local database and send it to remote database (activities)
-	 * @throws JSONException
 	 */
-	public void sendData() throws JSONException {
-		System.out.println("Starting to Post");
-		String token = settings.get("token");
-		String ActivityPosturl = "http://10.90.138.244:9091/V1/activity"; //for dev server
-		String ProcessPosturl = "http://10.90.138.244:9091/V1/process";
+	public void sendData(){
+		//assert !Platform.isFxApplicationThread();
+		try {
+			URL url = new URL("http://www.google.com");
+			URLConnection connection = url.openConnection();
+			connection.connect();
+		}catch ( Exception ex){
+			Platform.runLater(() -> {
+				DialogsAndAlert.Infomation("No internet connection");
+			});
+			return;
+		}
 		JSONArray result = new JSONArray();
-
 		//read from bd and set field sent to true
 		Statement stmt = null;
 		List <Integer>toUpdateIDs = new ArrayList<>();
 		try {
 			stmt = this.conn.createStatement();
-			ResultSet rs = stmt.executeQuery( "SELECT * FROM activities WHERE posted = 0;" );
+			ResultSet rs = stmt.executeQuery( "SELECT * FROM activitiesTable WHERE posted = 0;" );
 
 			while ( rs.next() ) {
 				JSONObject temp = new JSONObject();
@@ -389,42 +402,26 @@ public class Model {
 			}
 			rs.close();
 			stmt.close();
-		} catch ( Exception e ) {
-			System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+		} catch ( Exception ignored ) {
 		}
 
-		if(!result.isEmpty()){
-			System.out.println("Posting Activities!!");
-			JSONObject body = new JSONObject();
+		int activitiesPostResponse = API.post(result,"activities");
+		if (activitiesPostResponse == 200) {
+			try{
+				String updateids = "("+ toUpdateIDs.stream().map(Object::toString)
+						.collect(Collectors.joining(", ")) + ")";
+				Statement updateStmt = this.conn.createStatement();
+				String updateQuery = "UPDATE activitiesTable " +
+						"SET posted = 1 WHERE activityID in "+updateids;
+				updateStmt.executeUpdate(updateQuery);
+			}catch (Exception ignored){
+			}
 
-			body.put("activities",result);
-			HttpClient client = HttpClient.newBuilder().build();
-
-			HttpRequest request = HttpRequest.newBuilder()
-					.header("Content-Type", "application/json")
-					.header("accept", "application/json")
-					.header("Token", token)
-					.uri(URI.create(ActivityPosturl))
-					.POST(HttpRequest.BodyPublishers.ofString(body.toString()))
-					.build();
-
-			try {
-				HttpResponse<?> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-				System.out.println("Send data Status code : "+response.statusCode());
-				if (response.statusCode() == 200){
-					//update posted field to 1 -> sent
-					String updateids = "("+ toUpdateIDs.stream().map(Object::toString)
-							.collect(Collectors.joining(", ")) + ");";
-					System.out.println(updateids);
-					Statement updateStmt = this.conn.createStatement();
-					String updateQuery = "UPDATE activities set posted=1 WHERE activityID IN "+updateids;
-					updateStmt.executeUpdate(updateQuery);
-				}
-			} catch (Exception ex) {
-				throw new RuntimeException(ex);
+		}else{
+			if(activitiesPostResponse != 0){
+				DialogsAndAlert.Infomation("Data post issue with code ("+activitiesPostResponse+")");
 			}
 		}
-
 
 		//Post processes
 		List <Integer> ProcUpdateIDs = new ArrayList<>();
@@ -459,7 +456,7 @@ public class Model {
 
 				JSONObject memObj = new JSONObject();
 				String alternativeLabelMem = rs.getString("alternativeLabelMem");
-				memObj.put("alternativeLabel",alternativeLabelCpu);
+				memObj.put("alternativeLabel",alternativeLabelMem);
 				String capturedDateMem = rs.getString("capturedDateMem");
 				memObj.put("capturedDate",capturedDateMem);
 				String measurementTypeIdMem = rs.getString("measurementTypeIdCpu");
@@ -474,6 +471,8 @@ public class Model {
 				temp.put("osversion",osversion);
 				String pid =rs.getString("pid");
 				temp.put("pid",pid);
+				String processName = rs.getString("processName");
+				temp.put("processName",processName);
 				String userID = rs.getString("userID");
 				temp.put("userID",userID);
 
@@ -481,42 +480,27 @@ public class Model {
 				ProcUpdateIDs.add(ProcID);
 				resultPr.add(temp);
 			}
+			rs.close();
+			procSelectstmt.close();
 
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ignored) {
 		}
 
-		if(!resultPr.isEmpty()){
-			System.out.println("posting PS");
-			JSONObject ProcBody = new JSONObject();
+		int processesPostResponse = API.post(resultPr,"processesReport");
+		if (processesPostResponse == 200) {
+			try{
+				String updateids = "("+ ProcUpdateIDs.stream().map(Object::toString)
+						.collect(Collectors.joining(", ")) + ");";
 
+				Statement updateStmt = this.conn.createStatement();
+				String updateQuery = "UPDATE processesReports SET posted = 1 WHERE ProcID IN "+updateids;
+				updateStmt.execute(updateQuery);
+			}catch (Exception ignored){
+			}
 
-			ProcBody.put("processesReport",resultPr);
-			HttpClient client2 = HttpClient.newBuilder().build();
-			//System.out.println(ProcBody.toString());
-
-			HttpRequest request2 = HttpRequest.newBuilder()
-					.header("Content-Type", "application/json")
-					.header("accept", "application/json")
-					.header("Token", token)
-					.uri(URI.create(ProcessPosturl))
-					.POST(HttpRequest.BodyPublishers.ofString(ProcBody.toString()))
-					.build();
-
-			try {
-				HttpResponse<?> response = client2.send(request2, HttpResponse.BodyHandlers.ofString());
-				System.out.println("PS Send data Status code : "+response.statusCode());
-				if (response.statusCode() == 200){
-					//update posted field to 1 -> sent
-					String updateids = "("+ ProcUpdateIDs.stream().map(Object::toString)
-							.collect(Collectors.joining(", ")) + ");";
-					System.out.println("PS IDS : "+updateids);
-					Statement updateStmt = this.conn.createStatement();
-					String updateQuery = "UPDATE processesReports set posted=1 WHERE ProcID IN "+updateids;
-					updateStmt.executeUpdate(updateQuery);
-				}
-			} catch (Exception ex) {
-				throw new RuntimeException(ex);
+		} else{
+			if(processesPostResponse != 0){
+				DialogsAndAlert.Infomation("Data post issue with code ("+processesPostResponse+")");
 			}
 		}
 	}
@@ -529,7 +513,6 @@ public class Model {
 			SystemProcess tempProcess = this.processesQueue.remove();
 			if (this.conn != null && this.ProcsinsetStmt != null) {
 				try {
-
 					JSONObject processJson = tempProcess.toJson();
 					ProcsinsetStmt.setString(1, (String) processJson.get("collectedTime"));
 					ProcsinsetStmt.setString(2, (String) processJson.get("ip_address"));
@@ -547,12 +530,12 @@ public class Model {
 
 					ProcsinsetStmt.setString(12, (String) processJson.get("osversion"));
 					ProcsinsetStmt.setString(13, (String) processJson.get("pid"));
-					ProcsinsetStmt.setString(14, (String) processJson.get("userID"));
-					ProcsinsetStmt.setInt(15, 0);
-					ProcsinsetStmt.executeUpdate();
+					ProcsinsetStmt.setString(14, (String) processJson.get("processName"));
+					ProcsinsetStmt.setString(15, (String) processJson.get("userID"));
+					ProcsinsetStmt.setInt(16, 0);
+					ProcsinsetStmt.execute();
 
-				} catch (SQLException | JSONException ex) {
-					ex.printStackTrace();
+				} catch (SQLException | JSONException ignored) {
 				}
 			}
 		}
@@ -568,10 +551,10 @@ public class Model {
 				final AtomicBoolean stop = new AtomicBoolean(false);
 				while(!stop.get()){
 					try {
-						Thread.sleep(30000); //1 min
+						Thread.sleep(180000); //3 min
 						addProcessesToDb();
 					} catch (InterruptedException e) {
-						e.printStackTrace();
+						Thread.currentThread().interrupt();
 					}
 				}
 				return null;
@@ -581,18 +564,18 @@ public class Model {
 		Thread processtoDb = new Thread(task);
 		processtoDb.setDaemon(true);
 		processtoDb.start();
+		threadsContainer.put("processtoDb",processtoDb);
 	}
 
 	public void WatchProcesses(){
-		assert !Platform.isFxApplicationThread();
+
 		try{
-			String[] args = new String[] {"/bin/bash", "-c", "ps -aux --no-header"};
+			String[] args = new String[] {"/bin/bash", "-c", "ps axco pid,command,%mem,%cpu --no-header"};
 			Process proc = new ProcessBuilder(args).start();
 
 			Clock clock = Clock.systemDefaultZone();
 			ZonedDateTime t = clock.instant().atZone(ZoneId.systemDefault());
 			String captureTime = t.toLocalDateTime().toString();
-			System.out.println("Capture Date : "+captureTime);
 
 			BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 			String line = null;
@@ -600,6 +583,7 @@ public class Model {
 			while((line = reader.readLine())!= null ){
 				String[] processLine = line.split("\\s+");
 				String pid = processLine[1];
+				String pName = processLine[2];
 				SystemProcess tempProc = new SystemProcess();
 
 				Map <String, JSONObject> measurements = new HashMap<>();
@@ -608,7 +592,7 @@ public class Model {
 				cpu.put("alternativeLabel", "CPU%");
 				cpu.put("capturedDate", captureTime);
 				cpu.put("measurementTypeId", "5");
-				cpu.put("value", processLine[2]);
+				cpu.put("value", processLine[4]);
 				measurements.put("Cpu",cpu);
 
 				JSONObject mem = new JSONObject();
@@ -618,13 +602,12 @@ public class Model {
 				mem.put("value", processLine[3]);
 				measurements.put("Mem",mem);
 
-				tempProc.setProcessValues(this, measurements, captureTime, pid);
+				tempProc.setProcessValues(this, measurements, captureTime, pid, pName);
 				this.processesQueue.add(tempProc);
 			}
 			proc.waitFor();
 
-		}catch (IOException | InterruptedException e) {
-			e.printStackTrace();
+		}catch (InterruptedException | IOException ignored){
 		}
 	}
 
@@ -636,35 +619,78 @@ public class Model {
 				while(!stop.get()){
 					try {
 						WatchProcesses();
-						Thread.sleep(30000); //1/2 min
+						Thread.sleep(120000); //2 min
 					} catch (InterruptedException e) {
-						e.printStackTrace();
+						Thread.currentThread().interrupt();
 					}
 				}
 			}
 		};
-		Thread backgroundThread = new Thread(task);
-		backgroundThread.setDaemon(true);
-		backgroundThread.start();
+		Thread watchingProcessesThread = new Thread(task);
+		watchingProcessesThread.setDaemon(true);
+		watchingProcessesThread.start();
+		threadsContainer.put("watchingProcessesThread",watchingProcessesThread);
 	}
 
 	private void cleanDb(){
 		if (this.conn != null){
 			try {
 				//clear the activities table
-				Statement deleteStmt = this.conn.createStatement();
-				String deleteQuery = "DELETE FROM activities WHERE posted = 1;";
-				deleteStmt.executeUpdate(deleteQuery);
+				String deleteQuery = "DELETE FROM activitiesTable WHERE posted = 1;";
+				PreparedStatement deleteStmt = this.conn.prepareStatement(deleteQuery);
+				deleteStmt.executeUpdate();
 
 				//clear the processes table
-				Statement deleteStmtprocs = this.conn.createStatement();
 				String deleteQueryProcs = "DELETE FROM processesReports WHERE posted = 1;";
-				deleteStmtprocs.executeUpdate(deleteQueryProcs);
+				PreparedStatement deleteStmtprocs = this.conn.prepareStatement(deleteQueryProcs);
+				deleteStmtprocs.executeUpdate();
 
-			} catch (SQLException throwables) {
-				throwables.printStackTrace();
+			} catch (SQLException ex) {
+				Platform.runLater(() -> {
+					DialogsAndAlert.errorToDevTeam(ex,"DB clean failure");
+				});
 			}
+		}
+		String deleteQuery = "DELETE FROM activitiesTable WHERE posted = ?;";
+
+		try (PreparedStatement pstmt = this.conn.prepareStatement(deleteQuery)) {
+
+			pstmt.setInt(1, 1);
+			pstmt.executeUpdate();
+
+		} catch (SQLException ignore) {
+		}
+
+	}
+
+	private boolean tokenIsValid(final String tokenDate){
+		if (tokenDate.equals("Null")) {return false;}
+		LocalDate today = LocalDate.now();
+		today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+
+		Date d1 = null;
+		Date d2 = null;
+
+		try {
+			d2 = format.parse(today.toString());
+			d1 = format.parse(tokenDate);
+
+			long diff = d2.getTime() - d1.getTime();
+			long diffDays = diff / (24 * 60 * 60 * 1000);
+
+			return diffDays < 30;
+
+		} catch (Exception e) {
+			//todo : Log Exception
+			return false;
 		}
 	}
 
+	public boolean checkUpdates() {
+		return true;
+	}
+	public boolean dBIntialized() {
+		return this.conn != null;
+	}
 }
